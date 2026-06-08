@@ -70,7 +70,7 @@ No confirmation dialogs. No second-guessing. Just chaos.
 
 ```
 random-shop/
-├── panorama/
+├── result/mod/panorama/
 │   ├── layout/
 │   │   └── citadel_hud_hero_shop.xml   ← Original shop + Random tab added
 │   ├── scripts/
@@ -78,6 +78,7 @@ random-shop/
 │   └── styles/
 │       ├── random_shop.css             ← Tab styling + content layout
 │       └── custom_icons.css            ← Per-item icon images
+├── original_panorama/                  ← Vanilla game files (reference)
 └── README.md
 ```
 

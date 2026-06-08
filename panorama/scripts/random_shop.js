@@ -154,7 +154,10 @@
                 var icons = list.FindChildrenWithClassTraverse(ALL_MOD_CLASSES[ci]);
                 for (var ii = 0; ii < icons.length; ii++) {
                     var icon = icons[ii];
-                    if (!icon || !icon.IsValid() || icon.BHasClass('owned')) continue;
+                    if (!icon || !icon.IsValid()) continue;
+                    if (icon.BHasClass('owned')) continue;
+                    if (icon.BHasClass('usedAsComponent')) continue;
+                    if (icon.BHasClass('itemDisabled')) continue;
                     var tier = getTierFromPanel(icon, list);
                     if (tier !== tierNum) continue;
                     var dup = false;
