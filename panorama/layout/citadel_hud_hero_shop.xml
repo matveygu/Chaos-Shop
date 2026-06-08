@@ -78,6 +78,20 @@
 						<Panel id="RandomShopContent">
 							<Label class="RSTitle" text="RANDOM SHOP" />
 							<Label class="RSSubtitle" text="Choose a tier to get a random item" />
+							<Panel id="RSCategoryFilter">
+								<Panel id="RSFilterWeapon" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListWeapon');">
+									<Panel class="RSFilterDot RSFilterWeaponDot" />
+									<Label class="RSFilterLabel" text="WEAPON" />
+								</Panel>
+								<Panel id="RSFilterArmor" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListArmor');">
+									<Panel class="RSFilterDot RSFilterArmorDot" />
+									<Label class="RSFilterLabel" text="VITALITY" />
+								</Panel>
+								<Panel id="RSFilterTech" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListTech');">
+									<Panel class="RSFilterDot RSFilterTechDot" />
+									<Label class="RSFilterLabel" text="SPIRIT" />
+								</Panel>
+							</Panel>
 							<Panel id="RSTierButtons">
 								<Panel id="RSTier1" class="RSTierBtn" onmouseactivate="$.GetContextPanel().RandomShopRollTier(1);">
 									<Panel class="RSTierAccent tier1Accent" />

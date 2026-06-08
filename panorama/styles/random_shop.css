@@ -114,7 +114,81 @@
     color: #4a5a6a;
     horizontal-align: center;
     text-align: center;
-    margin-bottom: 22px;
+    margin-bottom: 10px;
+}
+
+/* -----------------------------------------------------------------
+   Category filter row
+   ----------------------------------------------------------------- */
+#RSCategoryFilter
+{
+    flow-children: right;
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.RSFilterBtn
+{
+    flow-children: right;
+    vertical-align: center;
+    width: fill-parent-flow( 1.0 );
+    height: 26px;
+    border-radius: 4px;
+    margin-right: 6px;
+    padding: 0px 8px;
+    border: 1px solid #1e2d48;
+    background-color: #0d1420;
+    transition-property: opacity, brightness;
+    transition-duration: 0.1s;
+}
+
+#RSFilterTech.RSFilterBtn
+{
+    margin-right: 0px;
+}
+
+.RSFilterBtn:hover
+{
+    brightness: 1.4;
+}
+
+.RSFilterDot
+{
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    vertical-align: center;
+    margin-right: 6px;
+}
+
+.RSFilterWeaponDot { background-color: #d06828; }
+.RSFilterArmorDot  { background-color: #48944a; }
+.RSFilterTechDot   { background-color: #7840c8; }
+
+.RSFilterLabel
+{
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    vertical-align: center;
+    color: #2a3a50;
+    transition-property: color;
+    transition-duration: 0.15s;
+}
+
+.RSFilterBtn.rs-filter-on .RSFilterLabel { color: #b0c0d4; }
+
+#RSFilterWeapon.rs-filter-on { border: 1px solid #d0682850; }
+#RSFilterArmor.rs-filter-on  { border: 1px solid #48944a50; }
+#RSFilterTech.rs-filter-on   { border: 1px solid #7840c850; }
+
+.RSFilterBtn.rs-filter-off { opacity: 0.35; }
+
+.rs-mode-rolled #RSCategoryFilter
+{
+    opacity: 0.4;
+    hittest: false;
 }
 
 /* -----------------------------------------------------------------
@@ -313,7 +387,11 @@
 }
 
 /* -----------------------------------------------------------------
-   Affordability dimming
+   Affordability / availability dimming
    ----------------------------------------------------------------- */
 .rs-cant-afford { opacity: 0.38; }
 .rs-cant-afford .RSTierCost { color: #c05050; }
+
+.rs-no-items { opacity: 0.28; }
+.rs-no-items .RSTierLabel { color: #704040; }
+.rs-no-items .RSTierCost  { color: #704040; }

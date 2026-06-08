@@ -36,7 +36,7 @@
         'techPurge', 'superiorStamina', 'veilWalker', 'warpStone', 'tormentAura', 'colossus',
         'healBuff', 'infuser', 'inhibitor', 'juggernaut', 'leech', 'phantomStrike',
         'siphon_bullets', 'unstoppable',
-        'extraCharge', 'techPower', 'magicBurst', 'techRange', 'slowingTech', 'acolytesGlove',
+        'extraCharge', 'goldenEgg', 'techPower', 'magicBurst', 'techRange', 'slowingTech', 'acolytesGlove',
         'arcaneSurge', 'bulletResistShredder', 'iceBlast', 'advancedRecharge', 'durationExtender',
         'soaringSpirit', 'techVulnerability', 'immobilize', 'focusedSilence', 'weaponJammer',
         'rupture', 'disarm', 'spiritualDominion', 'knockdown', 'megaSpirit', 'rapidRecharge',
@@ -58,6 +58,18 @@
     var _activatedWithShowing = [];
 
     var state = { mode: 'idle', itemClass: '', itemTier: 0, itemListId: '', itemType: 0 };
+
+    var _enabledLists = { 'ShopModsListWeapon': true, 'ShopModsListArmor': true, 'ShopModsListTech': true };
+    var LIST_FILTER_IDS   = { 'ShopModsListWeapon': 'RSFilterWeapon', 'ShopModsListArmor': 'RSFilterArmor', 'ShopModsListTech': 'RSFilterTech' };
+    var CATEGORY_NAMES    = { 'ShopModsListWeapon': 'Weapon', 'ShopModsListArmor': 'Vitality', 'ShopModsListTech': 'Spirit' };
+
+    function getEnabledCatString() {
+        var cats = [];
+        for (var i = 0; i < LIST_IDS.length; i++) {
+            if (_enabledLists[LIST_IDS[i]]) cats.push(CATEGORY_NAMES[LIST_IDS[i]]);
+        }
+        return cats.join('/');
+    }
 
     // ============================================================
     // Random tab activation / deactivation
@@ -148,6 +160,7 @@
     function collectItemsForTier(tierNum) {
         var root = $.GetContextPanel(); var result = [];
         for (var li = 0; li < LIST_IDS.length; li++) {
+            if (!_enabledLists[LIST_IDS[li]]) continue;
             var list = root.FindChildTraverse(LIST_IDS[li]);
             if (!list || !list.IsValid()) continue;
             for (var ci = 0; ci < ALL_MOD_CLASSES.length; ci++) {
@@ -330,6 +343,7 @@
         'durationExtender':                         'duration_extender',
         'escalatingExposure':                       'escalating_exposure',
         'extraCharge':                              'extra_charge',
+        'goldenEgg':                                'golden_egg',
         'focusedSilence':                           'spirit_sap',
         'glitch':                                   'curse',
         'iceBlast':                                 'cold_front',
@@ -497,6 +511,7 @@
         var msg = root.FindChildTraverse('RSNoItemsMsg');    if (msg) msg.text = '';
         var sts = root.FindChildTraverse('RSPurchaseStatus'); if (sts) sts.text = '';
         scheduleAffordabilityUpdate();
+        updateItemAvailability();
     }
 
     function updateAffordability() {
@@ -505,6 +520,15 @@
             var btn = root.FindChildTraverse('RSTier' + t);
             if (!btn || !btn.IsValid()) continue;
             btn.SetHasClass('rs-cant-afford', (souls >= 0) && (souls < (TIER_COSTS[t] || 0)));
+        }
+    }
+
+    function updateItemAvailability() {
+        var root = $.GetContextPanel();
+        for (var t = 1; t <= 4; t++) {
+            var btn = root.FindChildTraverse('RSTier' + t);
+            if (!btn || !btn.IsValid()) continue;
+            btn.SetHasClass('rs-no-items', collectItemsForTier(t).length === 0);
         }
     }
 
@@ -537,7 +561,7 @@
         var souls = getSouls();
         if (souls >= 0 && souls < cost) { if (msg) msg.text = 'Need ' + cost + ' souls (have ' + souls + ')'; return; }
         var items = collectItemsForTier(tierNum);
-        if (items.length === 0) { if (msg) msg.text = 'All Tier ' + tierNum + ' items already owned!'; return; }
+        if (items.length === 0) { if (msg) msg.text = 'All ' + getEnabledCatString() + ' Tier ' + tierNum + ' items owned!'; return; }
         if (areSlotsFullForItems(items)) { if (msg) msg.text = 'All slots full - sell an item first!'; return; }
         if (msg) msg.text = '';
         var picked = items[Math.floor(Math.random() * items.length)];
@@ -573,11 +597,28 @@
         loadAllItemsThenRoll(tierNum, doAutoPurchase);
     }
 
+    function RandomShopToggleCategory(listId) {
+        if (state.mode !== 'idle') return;
+        var enabledCount = 0;
+        for (var i = 0; i < LIST_IDS.length; i++) { if (_enabledLists[LIST_IDS[i]]) enabledCount++; }
+        if (_enabledLists[listId] && enabledCount <= 1) return;
+        _enabledLists[listId] = !_enabledLists[listId];
+        var root = $.GetContextPanel();
+        var btn = root.FindChildTraverse(LIST_FILTER_IDS[listId]);
+        if (btn && btn.IsValid()) {
+            btn.SetHasClass('rs-filter-on',  _enabledLists[listId]);
+            btn.SetHasClass('rs-filter-off', !_enabledLists[listId]);
+        }
+        $.Msg('[RandomShop] Toggle ' + listId + ' -> ' + _enabledLists[listId]);
+        updateItemAvailability();
+    }
+
     var ctx = $.GetContextPanel();
-    ctx.RandomShopRollTier  = RandomShopRollTier;
-    ctx.RandomShopBuyItem   = function () {};
-    ctx.ActivateRandomTab   = ActivateRandomTab;
-    ctx.DeactivateRandomTab = DeactivateRandomTab;
+    ctx.RandomShopRollTier       = RandomShopRollTier;
+    ctx.RandomShopBuyItem        = function () {};
+    ctx.ActivateRandomTab        = ActivateRandomTab;
+    ctx.DeactivateRandomTab      = DeactivateRandomTab;
+    ctx.RandomShopToggleCategory = RandomShopToggleCategory;
 
     function cancelSlotsFullRoll(root) {
         $.Msg('[RandomShop] Slots full - canceling roll');
