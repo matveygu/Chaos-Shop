@@ -94,3 +94,65 @@
 .RSAction { margin-top: 20px; padding: 9px 18px; background-color: #584452; border: 1px solid #99798b; border-radius: 4px; }
 .RSAction Label { color: #ffebde; font-size: 18px; }
 .rs-native-target #ModCard { border: 4px solid #f5a2ce; border-radius: 5px; }
+
+/* Draft cards follow Street Brawl's category rings, item art, and tier captions. */
+.RSModeRow, #RSSeedRow, .RSOfferRow, .RSHandActions { width: 100%; flow-children: right; }
+.RSModeRow { margin-bottom: 12px; }
+.RSMode {
+    padding: 7px 14px;
+    margin-right: 6px;
+    background-color: #332d37;
+    border: 1px solid #77657a;
+    border-radius: 4px;
+}
+.RSMode Label, #RSSeedLabel, #RSHandCode { vertical-align: center; font-size: 17px; color: #eaded1; }
+.RSMode.rs-selected { background-color: #68465c; border-color: #d8a9bd; }
+.RSMode:hover, .RSOffer:hover { brightness: 1.25; }
+.RSMode:disabled, .rs-unavailable { saturation: 0.25; opacity: 0.62; }
+#RSSeedRow { visibility: collapse; margin-bottom: 12px; }
+.rs-draft #RSSeedRow { visibility: visible; }
+#RSSeed { width: fill-parent-flow(1); max-width: 260px; min-height: 34px; margin: 0 8px; padding: 4px 8px; font-size: 18px; color: #fff1dc; background-color: #201d25; border: 1px solid #79697a; }
+#RSDraftView { width: 100%; flow-children: down; visibility: collapse; }
+.rs-hand #RSDraftView { visibility: visible; }
+.rs-hand #RSPicker { visibility: collapse; }
+.RSOffer {
+    width: fill-parent-flow(1);
+    height: 258px;
+    margin: 0 3px;
+    padding: 12px 8px;
+    flow-children: down;
+    background-color: gradient(linear, 0% 0%, 0% 100%, from(#38333b), to(#241f29));
+    border: 1px solid #806d80;
+    border-radius: 6px;
+}
+.RSOffer:focus { border-color: #ffebbb; }
+.RSOfferArt { width: 100%; height: 112px; }
+.RSOfferRing {
+    width: 110px; height: 110px; align: center center;
+    background-image: url("s2r://panorama/images/hud/brawl/rings/ring_background_psd.vtex");
+    background-size: 100% 100%; opacity: 0.8;
+}
+.RSOffer.isWeapon .RSOfferRing { wash-color: #f0a454; }
+.RSOffer.isArmor .RSOfferRing { wash-color: #8ac67a; }
+.RSOffer.isTech .RSOfferRing { wash-color: #c29bea; }
+.RSOfferIcon { align: center center; width: 74px; height: 74px; border-radius: 6px; }
+.RSOffer Label { horizontal-align: center; text-align: center; }
+.RSOfferTier { color: #ddc9b8; font-size: 16px; margin-top: 6px; }
+.RSOfferName { width: 100%; height: 61px; color: #fff2df; font-size: 21px; font-weight: bold; text-overflow: shrink; }
+.RSOfferPrice { color: #efcd86; font-size: 17px; }
+.RSHandActions { margin-top: 14px; }
+#RSHandCode { margin-left: 6px; color: #e2bbd1; }
+
+#RSRoomBox { width: 100%; flow-children: down; visibility: collapse; }
+.rs-team #RSRoomBox { visibility: visible; }
+.rs-team #RSPicker, .rs-team #RSHandCode { visibility: collapse; }
+.rs-team.rs-team-ready #RSPicker { visibility: visible; }
+.rs-team #RSPicker .RSModeRow, .rs-team #RSSeedRow { visibility: collapse; }
+.rs-team .RSSheet { margin-top: 18px; width: 91%; }
+.rs-team .RSTitle { font-size: 32px; margin-bottom: 5px; }
+.rs-team .RSHint { margin-bottom: 8px; }
+#RSRoomAddress { width: fill-parent-flow(1); font-size: 17px; height: 36px; color: #fcebd7; background-color: #211e26; padding: 4px 7px; border: 1px solid #80657c; }
+#RSRoomFrame { width: 100%; height: 100px; visibility: collapse; }
+.rs-transport #RSRoomFrame { visibility: visible; }
+#RSRoomBrowser { width: 100%; height: 100%; }
+.RSRoomHint { color: #ebd5bf; font-size: 16px; margin-bottom: 4px; }

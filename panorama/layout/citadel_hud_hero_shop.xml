@@ -70,7 +70,26 @@
 						<Panel id="RandomShopContent">
 							<Panel class="RSSheet">
 								<Label class="RSTitle" text="Chaos Shop" />
+                                <Panel id="RSRoomBox">
+                                    <Panel class="RSModeRow">
+                                        <TextEntry id="RSRoomAddress" maxchars="230" multiline="false" oninputsubmit="$.GetContextPanel().RandomShopConnectRoom();" />
+                                        <Button id="RSRoomConnect" class="RSMode" onactivate="$.GetContextPanel().RandomShopConnectRoom();"><Label id="RSRoomConnectLabel" /></Button>
+                                        <Button id="RSRoomBack" class="RSMode" onactivate="$.GetContextPanel().RandomShopRoom(false);"><Label id="RSRoomBackLabel" /></Button>
+                                    </Panel>
+                                    <Label id="RSRoomHint" class="RSRoomHint" />
+                                    <Panel id="RSRoomFrame" />
+                                </Panel>
 								<Panel id="RSPicker">
+									<Panel class="RSModeRow">
+									    <Button id="RSClassicMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopMode(false);"><Label id="RSClassicLabel" /></Button>
+									    <Button id="RSDraftMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopMode(true);"><Label id="RSDraftLabel" /></Button>
+                                    <Button id="RSTeamMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopRoom(true);"><Label id="RSTeamLabel" /></Button>
+									</Panel>
+									<Panel id="RSSeedRow">
+									    <Label id="RSSeedLabel" />
+									    <TextEntry id="RSSeed" maxchars="26" multiline="false" oninputsubmit="$.GetContextPanel().RandomShopJoin();" />
+									    <Button class="RSMode" onactivate="$.GetContextPanel().RandomShopJoin();"><Label id="RSJoinLabel" /></Button>
+									</Panel>
 									<Label id="RSHint" class="RSHint" />
 									<Panel class="RSFilterRow">
 										<Button id="RSFilterWeapon" class="RSFilter rs-on" onactivate="$.GetContextPanel().RandomShopToggleCategory('Weapon');"><Panel class="RSFilterMark" /><Label id="RSLabelWeapon" /></Button>
@@ -84,6 +103,34 @@
 										<Button id="RSTier4" class="RSTier" onactivate="$.GetContextPanel().RandomShopRollTier(4);"><Label class="RSNumeral" text="IV" /><Label id="RSCost4" class="RSTierCost" /></Button>
 									</Panel>
 									<Label id="RSResult" class="RSMessage" />
+								</Panel>
+								<Panel id="RSDraftView">
+								    <Label id="RSHandTitle" class="RSHint" />
+								    <Panel class="RSOfferRow">
+								        <Button id="RSDraftCard0" class="RSOffer" onactivate="$.GetContextPanel().RandomShopPick(0);">
+								            <Panel class="RSOfferArt" hittest="false"><Panel class="RSOfferRing" /><Image id="RSOfferIcon0" class="RSOfferIcon" scaling="stretch-to-fit-preserve-aspect" /></Panel>
+								            <Label id="RSOfferTier0" class="RSOfferTier" hittest="false" />
+								            <Label id="RSOfferName0" class="RSOfferName" hittest="false" />
+								            <Label id="RSOfferPrice0" class="RSOfferPrice" hittest="false" />
+								        </Button>
+								        <Button id="RSDraftCard1" class="RSOffer" onactivate="$.GetContextPanel().RandomShopPick(1);">
+								            <Panel class="RSOfferArt" hittest="false"><Panel class="RSOfferRing" /><Image id="RSOfferIcon1" class="RSOfferIcon" scaling="stretch-to-fit-preserve-aspect" /></Panel>
+								            <Label id="RSOfferTier1" class="RSOfferTier" hittest="false" />
+								            <Label id="RSOfferName1" class="RSOfferName" hittest="false" />
+								            <Label id="RSOfferPrice1" class="RSOfferPrice" hittest="false" />
+								        </Button>
+								        <Button id="RSDraftCard2" class="RSOffer" onactivate="$.GetContextPanel().RandomShopPick(2);">
+								            <Panel class="RSOfferArt" hittest="false"><Panel class="RSOfferRing" /><Image id="RSOfferIcon2" class="RSOfferIcon" scaling="stretch-to-fit-preserve-aspect" /></Panel>
+								            <Label id="RSOfferTier2" class="RSOfferTier" hittest="false" />
+								            <Label id="RSOfferName2" class="RSOfferName" hittest="false" />
+								            <Label id="RSOfferPrice2" class="RSOfferPrice" hittest="false" />
+								        </Button>
+								    </Panel>
+								    <Panel class="RSHandActions">
+								        <Button id="RSReroll" class="RSMode" onactivate="$.GetContextPanel().RandomShopReroll();"><Label id="RSRerollLabel" /></Button>
+								        <Button id="RSSkip" class="RSMode" onactivate="$.GetContextPanel().RandomShopSkip();"><Label id="RSSkipLabel" /></Button>
+								        <Label id="RSHandCode" />
+								    </Panel>
 								</Panel>
 								<Panel id="RSRolledView">
 									<Label id="RSPinnedLabel" class="RSEyebrow" />
@@ -178,6 +225,7 @@
 	</CitadelHudHeroShop>
 	<scripts>
 		<include src="s2r://panorama/scripts/chaos_inventory.vjs" />
+		<include src="s2r://panorama/scripts/chaos_draft.vjs" />
 		<include src="s2r://panorama/scripts/random_shop.vjs" />
 	</scripts>
 </root>

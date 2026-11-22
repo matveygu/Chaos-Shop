@@ -8,6 +8,37 @@
     hud.SetAttributeInt('rs_quickbuy_generation', generation);
     var cachedCard = null;
     var wallet = null;
+    var roomShop = null;
+    var lastReceipt='', receiptRetry=0, receiptDelay=0;
+
+    // This HUD remains scheduled even when the game suspends the hidden shop layout.
+    function syncRoom() {
+        var page=hud.GetAttributeString('rs_team_page','');
+        if (!page) return;
+        if (!roomShop || !roomShop.IsValid()) roomShop=hud.FindChildTraverse('CitadelHudHeroShop');
+        if (!roomShop) return;
+        var visible=hud.GetAttributeInt('rs_team_mode',0) && roomShop.BHasClass('gShopOpen') && roomShop.BHasClass('gShowingRandom') ? 1 : 0;
+        if (Date.now()<Number(hud.GetAttributeString('rs_view_after','0'))) return;
+        var received=hud.GetAttributeString('rs_team_receipt','');
+        var pick=hud.GetAttributeString('rs_live_pick','');
+        var confirmed=received && pick===received+'.'+hud.GetAttributeInt('rs_receipt_index',-1);
+        var sendReceipt=confirmed && (lastReceipt!==pick || Date.now()>=receiptRetry);
+        if (!sendReceipt && visible===hud.GetAttributeInt('rs_room_visible',1)) return;
+        var frame=roomShop.FindChildTraverse('RSRoomBrowser');
+        if (!frame || !frame.IsValid() || frame.GetAttributeInt('rs_room_frame',-1)!==hud.GetAttributeInt('rs_room_frame',0)) return;
+        if (sendReceipt) {
+            var match=/^([0-9A-F]{10})\.(\d+)(R?)\.([0-2])$/.exec(pick);
+            if (match) {
+                receiptDelay=lastReceipt===pick ? Math.min(60000,receiptDelay*2) : 3000;
+                lastReceipt=pick; receiptRetry=Date.now()+receiptDelay;
+                hud.SetAttributeString('rs_view_after',String(Date.now()+700));
+                frame.SetURL(page+'#op=finish&code='+match[1]+'&round='+match[2]+'&r='+(match[3]?'1':'0')+'&index='+match[4]+'&n='+Date.now());
+                return;
+            }
+        }
+        frame.SetURL(page+'#view='+visible);
+        hud.SetAttributeInt('rs_room_visible',visible);
+    }
 
     function status(value) {
         if (hud.GetAttributeString('rs_buy_status', '') !== value) hud.SetAttributeString('rs_buy_status', value);
@@ -65,6 +96,10 @@
             ChaosShopRecentCount(shop, item.name) > item.recentBefore;
         if (newSlot && (!item.sharedSlotClass || owned || namedReceipt)) {
             hud.SetAttributeInt('rs_equipped_serial', serial);
+            if (item.team) {
+                hud.SetAttributeString('rs_team_receipt',item.team);
+                hud.SetAttributeInt('rs_receipt_index',item.teamIndex);
+            }
             status('equipped');
             $.Msg('[Chaos Shop] Inventory confirmed: ' + item.name + ' (' + item.token + ')');
             return;
@@ -119,6 +154,7 @@
                 status('error');
             }
         } else cachedCard = null;
+        syncRoom();
         $.Schedule(pending === 'null' ? 0.25 : 0.15, watch);
     }
     watch();
