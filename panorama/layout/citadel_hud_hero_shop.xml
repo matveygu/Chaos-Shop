@@ -1,11 +1,10 @@
-﻿<!-- xml reconstructed by Source 2 Viewer 19.2.0.0 - https://valveresourceformat.github.io -->
+<!-- xml reconstructed by Source 2 Viewer 21.1.0.0 - https://valveresourceformat.github.io -->
 <root>
 	<styles>
-		<include src="s2r://panorama/styles/citadel_base_styles.vcss_c" />
-		<include src="s2r://panorama/styles/citadel_hud_hero_shop.vcss_c" />
-		<include src="s2r://panorama/styles/ability_icons.vcss_c" />
-		<include src="s2r://panorama/styles/custom_icons.css" />
-		<include src="s2r://panorama/styles/random_shop.css" />
+		<include src="s2r://panorama/styles/citadel_base_styles.vcss" />
+		<include src="s2r://panorama/styles/citadel_hud_hero_shop.vcss" />
+		<include src="s2r://panorama/styles/ability_icons.vcss" />
+		<include src="s2r://panorama/styles/random_shop.vcss" />
 	</styles>
 	<snippets>
 		<snippet name="RecentPurchase">
@@ -21,128 +20,88 @@
 	<CitadelHudHeroShop class="CitadelHudHeroShop gShopOpen" oncancel="CitadelExitUpgradeShop();" disallowedstyleflags="hover,descendantfocus" onactivate="">
 		<GlobalClassListener classes="gEditingBuilds gScoreboardOpen gShopOpen" />
 		<Panel id="Shop" disallowedstyleflags="hover,descendantfocus">
+			<Button id="ShopSettingsButton" onactivate="CitadelSettingsFocusSection( &apos;#citadel_settings_game&apos;, &apos;#citadel_settings_shop&apos; );" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_SettingsTooltip )" onmouseout="CitadelUIHideTextTooltip()">
+				<Image src="s2r://panorama/images/icons/icon_gear.vsvg" />
+			</Button>
 			<Panel id="MainPanel" disallowedstyleflags="hover,descendantfocus">
 				<Panel id="ShopModsContainer" disallowedstyleflags="hover,descendantfocus">
 					<Panel id="ShopNavigation" disallowedstyleflags="hover,descendantfocus">
-						<Panel id="FavoritesNav" class="NavigationButton" onmouseactivate="CitadelShopModsActivate( EItemSlotType_Favorites ); PlaySoundEffect( &apos;UI.Shop.Mod.Starred.Click&apos; );">
+						<Panel id="FavoritesNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_Build', 'UI.Shop.Mod.Starred.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_Builds )" onmouseout="CitadelUIHideTextTooltip()">
 							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
 							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
 						</Panel>
-						<Panel id="WeaponNav" class="NavigationButton" onmouseactivate="CitadelShopModsActivate( EItemSlotType_WeaponMod ); PlaySoundEffect( &apos;UI.Shop.Mod.Weapon.Click&apos; );">
+						<Panel id="RecommendedNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_Recommended', 'UI.Shop.Mod.Starred.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_Recommended )" onmouseout="CitadelUIHideTextTooltip()">
 							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
 							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
 						</Panel>
-						<Panel id="ArmorNav" class="NavigationButton" onmouseactivate="CitadelShopModsActivate( EItemSlotType_Armor ); PlaySoundEffect( &apos;UI.Shop.Mod.Vitality.Click&apos; );">
+						<Panel id="FilteredNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_AllItems', 'UI.Shop.Mod.Starred.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_AllItems )" onmouseout="CitadelUIHideTextTooltip()">
 							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
+							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
-							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 						</Panel>
-						<Panel id="TechNav" class="NavigationButton" onmouseactivate="CitadelShopModsActivate( EItemSlotType_Tech ); PlaySoundEffect( &apos;UI.Shop.Mod.Magic.Click&apos; );">
+						<Panel id="WeaponNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_Weapon', 'UI.Shop.Mod.Weapon.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_WeaponItems )" onmouseout="CitadelUIHideTextTooltip()">
 							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
+							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
-							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
 						</Panel>
-						<Panel id="SearchNav" class="NavigationButton" onmouseactivate="CitadelShopModsActivate( EItemSlotType_All ); PlaySoundEffect( &apos;UI.Shop.Mod.Search.Click&apos; );" onmouseover="UIShowTextTooltip( #CitadelShopSearch)" onmouseout="UIHideTextTooltip();" />
-						<Panel id="ToggleContainer" onactivate="CitadelToggleComponentGroupingInShop();">
-							<Panel id="ShowCategories" class="viewToggle category_view" onmouseover="UIShowTextTooltip( #Citadel_Shop_Sort_Tooltip_Categories )" onmouseout="UIHideTextTooltip()" />
-							<Panel id="ShowTiers" class="viewToggle tiers_view" onmouseover="UIShowTextTooltip( #Citadel_Shop_Sort_Tooltip_Tier )" onmouseout="UIHideTextTooltip()" />
-						</Panel>
-						<Panel id="RandomNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().ActivateRandomTab();">
+						<Panel id="TechNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_Spirit', 'UI.Shop.Mod.Magic.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_SpiritItems )" onmouseout="CitadelUIHideTextTooltip()">
 							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
 							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
-							<Panel class="ShopNavigationTab RSRandomTabIcon" />
+							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
 						</Panel>
+						<Panel id="ArmorNav" class="NavigationButton" onmouseactivate="$.GetContextPanel().RandomShopSelectTab('EShopTab_Vitality', 'UI.Shop.Mod.Vitality.Click');" onmouseover="CitadelUIShowTextTooltip( #Citadel_Shop_NavTab_VitalityItems )" onmouseout="CitadelUIHideTextTooltip()">
+							<Panel class="ShopNavigationTab ShopNavigationTabBackground" />
+							<Panel class="ShopNavigationTab ShopNavigationTabEdgeOverlay" />
+							<Panel class="ShopNavigationTab ShopNavigationTabIcon" />
+						</Panel>
+						<Button id="RandomNav" class="NavigationButton" onactivate="$.GetContextPanel().ActivateRandomTab();" onmouseover="CitadelUIShowTextTooltip( 'Chaos Shop' )" onmouseout="CitadelUIHideTextTooltip()">
+							<Label class="RSNavGlyph" text="?" />
+							<Panel class="RSPinDot" />
+						</Button>
 					</Panel>
 					<Panel id="ShopModListsContainer" disallowedstyleflags="hover,descendantfocus">
 						<Label class="HeroFavoritesHeaderLabel" text="{s:hero_name}&apos;s Recommended Mods" />
-						<CitadelShopModsList id="ShopModsListWeapon" category="Weapon" />
-						<CitadelShopModsList id="ShopModsListArmor" category="Armor" />
-						<CitadelShopModsList id="ShopModsListTech" category="Tech" />
 						<CitadelShopModsBuild id="ShopModsSelectedBuild" />
-						<CitadelShopModsList id="ShopModsListAll" category="All" />
-						<Panel id="SearchHeader">
-							<Panel id="SearchExamples">
-								<Label class="searchTitle" text="#CitadelShopSearch" />
-								<Label html="true" class="SearchExampleHeader" text="#CitadelShop_SearchExampleAlt" />
-							</Panel>
-							<Panel id="SearchContainer">
-								<Panel id="SearchBox">
-									<Panel id="ShopSearchIcon" onactivate="SetSearchFocus();" />
-									<TextEntry id="SearchTextEntry" acceptsfocus="true" acceptsinput="true" placeholder="#CitadelShopSearch" ontextentrychange="CitadelShopSearchTextEntryChanged()" onfocus="CitadelShopSearchTextEntryChanged()" />
-									<Button id="ClearSearchButton" onactivate="CitadelShopSearchTextEntryClear();" />
-								</Panel>
-							</Panel>
-						</Panel>
+						<CitadelShopModsFiltered id="ShopModsFiltered" />
+						<CitadelShopModsRecommended id="ShopModsRecommended" />
+						<CitadelShopFilters id="ShopFilters" />
 						<Panel id="RandomShopContent">
-							<Label class="RSTitle" text="RANDOM SHOP" />
-							<Label class="RSSubtitle" text="Choose a tier to get a random item" />
-							<Panel id="RSCategoryFilter">
-								<Panel id="RSFilterWeapon" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListWeapon');">
-									<Panel class="RSFilterDot RSFilterWeaponDot" />
-									<Label class="RSFilterLabel" text="WEAPON" />
+							<Panel class="RSSheet">
+								<Label class="RSTitle" text="Chaos Shop" />
+								<Panel id="RSPicker">
+									<Label id="RSHint" class="RSHint" />
+									<Panel class="RSFilterRow">
+										<Button id="RSFilterWeapon" class="RSFilter rs-on" onactivate="$.GetContextPanel().RandomShopToggleCategory('Weapon');"><Panel class="RSFilterMark" /><Label id="RSLabelWeapon" /></Button>
+										<Button id="RSFilterVitality" class="RSFilter rs-on" onactivate="$.GetContextPanel().RandomShopToggleCategory('Vitality');"><Panel class="RSFilterMark" /><Label id="RSLabelVitality" /></Button>
+										<Button id="RSFilterSpirit" class="RSFilter rs-on" onactivate="$.GetContextPanel().RandomShopToggleCategory('Spirit');"><Panel class="RSFilterMark" /><Label id="RSLabelSpirit" /></Button>
+									</Panel>
+									<Panel class="RSTierRow">
+										<Button id="RSTier1" class="RSTier" onactivate="$.GetContextPanel().RandomShopRollTier(1);"><Label class="RSNumeral" text="I" /><Label id="RSCost1" class="RSTierCost" /></Button>
+										<Button id="RSTier2" class="RSTier" onactivate="$.GetContextPanel().RandomShopRollTier(2);"><Label class="RSNumeral" text="II" /><Label id="RSCost2" class="RSTierCost" /></Button>
+										<Button id="RSTier3" class="RSTier" onactivate="$.GetContextPanel().RandomShopRollTier(3);"><Label class="RSNumeral" text="III" /><Label id="RSCost3" class="RSTierCost" /></Button>
+										<Button id="RSTier4" class="RSTier" onactivate="$.GetContextPanel().RandomShopRollTier(4);"><Label class="RSNumeral" text="IV" /><Label id="RSCost4" class="RSTierCost" /></Button>
+									</Panel>
+									<Label id="RSResult" class="RSMessage" />
 								</Panel>
-								<Panel id="RSFilterArmor" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListArmor');">
-									<Panel class="RSFilterDot RSFilterArmorDot" />
-									<Label class="RSFilterLabel" text="VITALITY" />
-								</Panel>
-								<Panel id="RSFilterTech" class="RSFilterBtn rs-filter-on" onmouseactivate="$.GetContextPanel().RandomShopToggleCategory('ShopModsListTech');">
-									<Panel class="RSFilterDot RSFilterTechDot" />
-									<Label class="RSFilterLabel" text="SPIRIT" />
-								</Panel>
-							</Panel>
-							<Panel id="RSTierButtons">
-								<Panel id="RSTier1" class="RSTierBtn" onmouseactivate="$.GetContextPanel().RandomShopRollTier(1);">
-									<Panel class="RSTierAccent tier1Accent" />
-									<Panel class="RSTierContent">
-										<Label class="RSTierLabel" text="TIER 1" />
-										<Panel class="RSTierCostRow">
-											<Panel class="RSSoulsIcon" />
-											<Label class="RSTierCost" text="800" />
+								<Panel id="RSRolledView">
+									<Label id="RSPinnedLabel" class="RSEyebrow" />
+									<Panel class="RSItemRow">
+										<Panel id="RSBigIconWrapper">
+											<Label id="RSFallbackTier" />
+											<Image id="RSIconImage" scaling="stretch-to-fit-preserve-aspect" />
+										</Panel>
+										<Panel class="RSItemInfo">
+											<Label id="RSItemTier" class="RSEyebrow" />
+											<Label id="RSItemName" />
+											<Label id="RSPrice" />
 										</Panel>
 									</Panel>
+									<Panel class="RSProgressTrack"><Panel id="RSProgress" /></Panel>
+									<Label id="RSPurchaseStatus" class="RSMessage" />
+									<Button id="RSShowItem" class="RSAction" onactivate="$.GetContextPanel().RandomShopShowItem();"><Label id="RSShowLabel" /></Button>
 								</Panel>
-								<Panel id="RSTier2" class="RSTierBtn" onmouseactivate="$.GetContextPanel().RandomShopRollTier(2);">
-									<Panel class="RSTierAccent tier2Accent" />
-									<Panel class="RSTierContent">
-										<Label class="RSTierLabel" text="TIER 2" />
-										<Panel class="RSTierCostRow">
-											<Panel class="RSSoulsIcon" />
-											<Label class="RSTierCost" text="1600" />
-										</Panel>
-									</Panel>
-								</Panel>
-								<Panel id="RSTier3" class="RSTierBtn" onmouseactivate="$.GetContextPanel().RandomShopRollTier(3);">
-									<Panel class="RSTierAccent tier3Accent" />
-									<Panel class="RSTierContent">
-										<Label class="RSTierLabel" text="TIER 3" />
-										<Panel class="RSTierCostRow">
-											<Panel class="RSSoulsIcon" />
-											<Label class="RSTierCost" text="3200" />
-										</Panel>
-									</Panel>
-								</Panel>
-								<Panel id="RSTier4" class="RSTierBtn" onmouseactivate="$.GetContextPanel().RandomShopRollTier(4);">
-									<Panel class="RSTierAccent tier4Accent" />
-									<Panel class="RSTierContent">
-										<Label class="RSTierLabel" text="TIER 4" />
-										<Panel class="RSTierCostRow">
-											<Panel class="RSSoulsIcon" />
-											<Label class="RSTierCost" text="6400" />
-										</Panel>
-									</Panel>
-								</Panel>
-							</Panel>
-							<Label id="RSNoItemsMsg" class="RSNoItemsMsg" text="" />
-							<Panel id="RSRolledView">
-								<Panel class="RSDivider" />
-								<Panel id="RSBigIconWrapper">
-									<Panel id="RSIconImage" class="RSOverlayImage" />
-								</Panel>
-								<Label id="RSItemName" class="RSItemName" text="" />
-								<Label id="RSItemTier" class="RSItemTierLabel" text="" />
-								<Label id="RSPurchaseStatus" class="RSPurchaseStatus" text="" />
 							</Panel>
 						</Panel>
 					</Panel>
@@ -165,6 +124,7 @@
 						</Panel>
 					</Panel>
 				</Panel>
+				<CitadelScrollShortcuts id="PriceTierShortcuts" />
 				<Panel id="RecentPurchasesPanel">
 					<Label id="RecentPurchases" text="#Citadel_Hud_RecentPurchases" />
 					<Panel id="RecentPurchasesContainer" />
@@ -182,6 +142,9 @@
 						</Panel>
 						<Panel id="HeroStatsBtn" onmouseout="CitadelHideHeroStatsTooltip();">
 							<Label text="View Hero Stats" />
+						</Panel>
+						<Panel id="CorruptItemBtn">
+							<Label text="#Citadel_Shop_CorruptItem_Button" />
 						</Panel>
 					</Panel>
 				</Panel>
@@ -206,9 +169,15 @@
 				</Panel>
 			</Panel>
 		</Panel>
+		<Panel id="EnterPurchasePrompt" hittest="false">
+			<CitadelBinding class="EnterPurchaseKey" action="ShopPurchaseSearchMatch" />
+			<Label class="EnterPurchaseLabel EnterPurchasePurchaseLabel" text="#Citadel_Shop_EnterPurchase_Purchase" />
+			<Label class="EnterPurchaseLabel EnterPurchaseSellLabel" text="#Citadel_Shop_EnterPurchase_Sell" />
+		</Panel>
 		<Panel id="Outline" hittest="false" />
 	</CitadelHudHeroShop>
 	<scripts>
-		<include src="s2r://panorama/scripts/random_shop.js" />
+		<include src="s2r://panorama/scripts/chaos_inventory.vjs" />
+		<include src="s2r://panorama/scripts/random_shop.vjs" />
 	</scripts>
 </root>

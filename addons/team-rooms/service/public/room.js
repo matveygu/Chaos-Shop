@@ -1,0 +1,103 @@
+'use strict';
+const el = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const tag = params.get('client') || 'browser';
+const en = params.get('lang') === 'en';
+const t = (ru, eng) => en ? eng : ru;
+document.documentElement.lang = en ? 'en' : 'ru';
+if (en) {
+  for (const [id,str] of Object.entries({create:'Create room',join:'Join',copy:'Copy invite',leave:'Leave'})) el(id).textContent=str;
+  el('code').placeholder='Friend’s code';
+}
+const storageKey = 'chaos-team-v1:' + tag;
+function identity() {
+  const fresh = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), b=>b.toString(16).padStart(2,'0')).join('');
+  try {
+    for (let i=localStorage.length-1;i>=0;i--) {
+      const k=localStorage.key(i);
+      if (k && k.startsWith('chaos-team-v1:') && Number((localStorage.getItem(k)||'').split('|')[0]) < Date.now()-4*3600000) localStorage.removeItem(k);
+    }
+    let key=(localStorage.getItem(storageKey)||'').split('|')[1];
+    if (!/^[0-9a-f]{48}$/.test(key||'')) key=fresh();
+    localStorage.setItem(storageKey,Date.now()+'|'+key); return key;
+  } catch { return fresh(); }
+}
+const key = identity();
+let state=null, serial=0, tail=Promise.resolve(), error='', busy=0, lastHash='';
+const messages={
+  no_room:t('Комната закрыта или код неверен.','Room closed or code incorrect.'), full:t('В комнате уже двое.','Room is full.'),
+  stale:t('Расклад обновился. Проверь карточки.','Hand changed. Check the cards.'), locked:t('Выбор уже зафиксирован.','Choice is already locked.'),
+  offline:t('Нет связи с сервисом. Повторяю подключение…','Service unreachable. Reconnecting…'), waiting:t('Ожидаем второго игрока.','Waiting for the other player.'),
+  slow_down:t('Слишком много попыток. Подожди минуту.','Too many attempts. Wait a minute.')
+};
+function draw() {
+  el('room').hidden=!state; el('lobby').hidden=!!state;
+  for (const id of ['create','join','leave']) el(id).disabled=!!busy;
+  let hint=t('Создай комнату или введи код друга.','Create a room or enter your friend’s code.');
+  if (state) {
+    el('roster').textContent=(state.host?t('Ведущий','Host'):t('Участник','Guest'))+' · '+state.players+'/2';
+    el('invite').value=location.origin+'/#join='+state.code;
+    hint=state.players<2 ? messages.waiting :
+      state.ready ? (state.host?t('Выбери категории и тир в магазине.','Choose categories and tier in the shop.'):t('Ведущий выбирает тир.','Host is choosing a tier.')) :
+      state.done?t('Готово. Ждём напарника.','Ready. Waiting for teammate.'):
+      state.choice!==null?t('Предмет закреплён до покупки.','Item pinned until purchased.'):t('Выберите по одной карте.','Each player picks one card.');
+  }
+  el('status').textContent=error||hint;
+}
+function notify() {
+  document.title='CSROOM1|'+JSON.stringify({tag,seq:++serial,state});
+}
+async function post(body) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),6000);
+  try {
+    const res=await fetch('/room',{method:'POST',headers:{'Content-Type':'application/json','X-Room-Player':key},body:JSON.stringify(body),signal:controller.signal});
+    const result=await res.json();
+    if (!res.ok) throw new Error(result.error);
+    const changed=JSON.stringify(state)!==JSON.stringify(result.state);
+    state=result.state; if (changed || serial===0) notify();
+  } finally { clearTimeout(timer); }
+}
+function enqueue(body) {
+  busy++; draw();
+  const exec=async()=>{
+    try { await post(body); error=''; }
+    catch (e) { error=messages[e.message] || (e.name==='TypeError'||e.name==='AbortError'?messages.offline:t('Действие не выполнено.','Action was declined.'));
+      if (body.op!=='state') { try { await post({op:'state'}); } catch {} }
+    } finally { busy--; draw(); }
+  };
+  tail=tail.then(exec,exec); return tail;
+}
+function join(value) {
+  const code=value.trim().toUpperCase();
+  if (!/^[0-9A-F]{10}$/.test(code)) { error=messages.no_room; draw(); return; }
+  return enqueue({op:'join',code});
+}
+function fromGame() {
+  if (lastHash===location.hash) return;
+  lastHash=location.hash;
+  const hash=new URLSearchParams(location.hash.slice(1));
+  if (hash.has('join') && !state) { el('code').value=hash.get('join'); join(el('code').value); return; }
+  if (!hash.has('op') || !state || hash.get('code')!==state.code) return;
+  const op=hash.get('op');
+  if (!['deal','reroll','pick','finish','pass','skip','leave'].includes(op)) return;
+  enqueue({op,code:state.code,round:Number(hash.get('round')),rerolled:hash.get('r')==='1',
+    tier:Number(hash.get('tier')),mask:Number(hash.get('mask')),index:Number(hash.get('index'))});
+}
+el('create').onclick=()=>enqueue({op:'create'});
+el('join').onclick=()=>join(el('code').value);
+el('code').onkeydown=e=>{if(e.key==='Enter') join(el('code').value);};
+el('copy').onclick=async()=>{
+  const field=el('invite'); field.select();
+  try { await navigator.clipboard.writeText(field.value); }
+  catch { if (!document.execCommand('copy')) { el('status').textContent=t('Нажми Ctrl+C.','Press Ctrl+C.'); return; } }
+  el('status').textContent=t('Приглашение скопировано.','Invite copied.');
+};
+el('leave').onclick=()=>state && enqueue({op:'leave',code:state.code});
+addEventListener('hashchange',fromGame);
+async function start() {
+  await enqueue({op:'state'}); fromGame();
+  async function poll() { if (!busy) await enqueue({op:'state'}); setTimeout(poll,1000); }
+  setTimeout(poll,1000);
+}
+start();

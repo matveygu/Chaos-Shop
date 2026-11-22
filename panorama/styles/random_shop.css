@@ -1,397 +1,96 @@
-﻿/* =================================================================
-   Random Shop - tab added to existing shop navigation
-   ================================================================= */
-
-/* -----------------------------------------------------------------
-   Random tab button styling
-   ----------------------------------------------------------------- */
-#RandomNav .ShopNavigationTabBackground
-{
-    opacity-brush: gradient( linear, 0% 0%, 100% 0%, from( rgb(200, 80, 130) ), to( rgb(200, 80, 130) ) );
+/* The Random tab shares the native shop canvas and its game fonts. */
+#RandomNav {
+    width: 60px;
+    height: 64px;
+    background-color: #342b35;
+    border-left: 4px solid #dc89ac;
+    border-radius: 5px 0px 0px 5px;
 }
+#RandomNav:hover, .gShowingRandom #RandomNav { background-color: #784561; }
+.RSNavGlyph { align: center center; color: #ffe3ec; font-size: 36px; font-weight: bold; }
+.RSPinDot { align: right top; margin: 7px; width: 9px; height: 9px; border-radius: 50%; background-color: #f6c875; visibility: collapse; }
+.rs-pending .RSPinDot { visibility: visible; }
 
-.CitadelHudHeroShop:not(.gShowingRandom) #RandomNav .ShopNavigationTabBackground
-{
-    opacity-brush: gradient( linear, 85% 0%, 100% 0%, from( rgb(200, 80, 130) ), color-stop( 0.5, rgb(160, 55, 100) ), to( rgb(100, 25, 60) ) );
-}
-
-.CitadelHudHeroShop:not(.gShowingRandom) #RandomNav.NavigationButton:hover .ShopNavigationTabBackground
-{
-    opacity-brush: gradient( linear, 80% 0%, 100% 0%, from( rgb(255, 130, 175) ), to( rgb(200, 80, 130) ) );
-}
-
-.gShowingRandom #RandomNav.NavigationButton
-{
-    height: 210px;
-    z-index: 2;
-}
-
-.gShowingRandom #RandomNav.NavigationButton .ShopNavigationTabBackground
-{
-    height: 230px;
-}
-
-.RSRandomTabIcon
-{
-    width: 70px;
-    height: 75px;
-    ignore-parent-flow: true;
-    background-image: url("s2r://panorama/images/hud/hud_icon_gold.vsvg");
-    background-size: 44%;
-    background-repeat: no-repeat;
-    background-position: center center;
-    opacity: 0.85;
-}
-
-/* -----------------------------------------------------------------
-   When Random tab active: hide all native lists.
-   Our CSS loads after citadel_hud_hero_shop.vcss_c so same-specificity
-   rules here override the game's .showingX rules.
-   ----------------------------------------------------------------- */
-.gShowingRandom #ShopModsListWeapon,
-.gShowingRandom #ShopModsListArmor,
-.gShowingRandom #ShopModsListTech,
-.gShowingRandom #ShopModsSelectedBuild,
-.gShowingRandom #ShopModsListAll,
-.gShowingRandom #SearchHeader,
-.gShowingRandom .HeroFavoritesHeaderLabel
-{
-    opacity: 0;
-    transform: translateY( -20px );
-}
-
-.gShowingRandom #ToggleContainer
-{
-    opacity: 0;
-}
-
-.gShowingRandom #ShopModListsContainer
-{
-    background-image: url("s2r://panorama/images/shop/catalog/catalog_shop_generic_bg_psd.vtex");
-}
-
-/* -----------------------------------------------------------------
-   Random Shop content panel
-   ----------------------------------------------------------------- */
-#RandomShopContent
-{
+#RandomShopContent {
+    visibility: collapse;
     ignore-parent-flow: true;
     width: 100%;
     height: 100%;
     z-index: 50;
+    background-color: gradient(linear, 0% 0%, 100% 100%, from(#342c36), to(#161b23));
+}
+.gShowingRandom #RandomShopContent { visibility: visible; }
+.gShowingRandom #ShopModsFiltered, .gShowingRandom #ShopFilters,
+.gShowingRandom #ShopModsRecommended, .gShowingRandom #ShopModsSelectedBuild,
+.gShowingRandom .HeroFavoritesHeaderLabel { opacity: 0; }
+.RSSheet {
     flow-children: down;
-    padding: 28px 24px 24px 24px;
-    opacity: 0;
-    hittest: false;
-    transition-property: opacity;
-    transition-duration: 0.21s;
-}
-
-.gShowingRandom #RandomShopContent
-{
-    opacity: 1;
-    hittest: true;
-}
-
-/* -----------------------------------------------------------------
-   Header
-   ----------------------------------------------------------------- */
-.RSTitle
-{
-    font-size: 20px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 5px;
-    color: #d8c89a;
     horizontal-align: center;
-    text-align: center;
-    margin-bottom: 4px;
+    width: 85%;
+    max-width: 800px;
+    margin-top: 95px;
 }
-
-.RSSubtitle
-{
-    font-size: 11px;
-    color: #4a5a6a;
-    horizontal-align: center;
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-/* -----------------------------------------------------------------
-   Category filter row
-   ----------------------------------------------------------------- */
-#RSCategoryFilter
-{
+.RSTitle { font-size: 48px; font-weight: bold; color: #fff1dc; margin-bottom: 12px; }
+#RSPicker, #RSRolledView { width: 100%; flow-children: down; }
+.RSHint { color: #ebe0d4; font-size: 21px; margin-bottom: 30px; }
+.RSFilterRow, .RSTierRow, .RSItemRow { flow-children: right; width: 100%; }
+.RSFilter {
+    height: 46px;
+    width: fill-parent-flow(1);
     flow-children: right;
-    width: 100%;
-    margin-bottom: 14px;
-}
-
-.RSFilterBtn
-{
-    flow-children: right;
-    vertical-align: center;
-    width: fill-parent-flow( 1.0 );
-    height: 26px;
-    border-radius: 4px;
-    margin-right: 6px;
-    padding: 0px 8px;
-    border: 1px solid #1e2d48;
-    background-color: #0d1420;
-    transition-property: opacity, brightness;
-    transition-duration: 0.1s;
-}
-
-#RSFilterTech.RSFilterBtn
-{
-    margin-right: 0px;
-}
-
-.RSFilterBtn:hover
-{
-    brightness: 1.4;
-}
-
-.RSFilterDot
-{
-    width: 7px;
-    height: 7px;
-    border-radius: 50px;
-    vertical-align: center;
-    margin-right: 6px;
-}
-
-.RSFilterWeaponDot { background-color: #d06828; }
-.RSFilterArmorDot  { background-color: #48944a; }
-.RSFilterTechDot   { background-color: #7840c8; }
-
-.RSFilterLabel
-{
-    font-size: 10px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    vertical-align: center;
-    color: #2a3a50;
-    transition-property: color;
-    transition-duration: 0.15s;
-}
-
-.RSFilterBtn.rs-filter-on .RSFilterLabel { color: #b0c0d4; }
-
-#RSFilterWeapon.rs-filter-on { border: 1px solid #d0682850; }
-#RSFilterArmor.rs-filter-on  { border: 1px solid #48944a50; }
-#RSFilterTech.rs-filter-on   { border: 1px solid #7840c850; }
-
-.RSFilterBtn.rs-filter-off { opacity: 0.35; }
-
-.rs-mode-rolled #RSCategoryFilter
-{
-    opacity: 0.4;
-    hittest: false;
-}
-
-/* -----------------------------------------------------------------
-   Tier buttons
-   ----------------------------------------------------------------- */
-#RSTierButtons
-{
-    flow-children: down;
-    width: 100%;
-}
-
-.RSTierBtn
-{
-    width: 100%;
-    height: 62px;
-    flow-children: right;
-    margin-bottom: 8px;
+    margin-right: 8px;
+    padding: 0 12px;
+    border: 1px solid #766674;
     border-radius: 5px;
-    background-color: #0f1622;
-    border: 1px solid #1a2840;
-    transition-property: brightness, pre-transform-scale2d;
-    transition-duration: 0.1s;
-    overflow: noclip;
+    background-color: #2e2931;
 }
-
-.rs-mode-rolled .RSTierBtn
-{
-    opacity: 0.45;
-    hittest: false;
-}
-
-.RSTierBtn:hover
-{
-    brightness: 1.4;
-    pre-transform-scale2d: 1.02;
-    border: 1px solid #3a5878;
-}
-
-.RSTierBtn:active
-{
-    brightness: 0.8;
-    pre-transform-scale2d: 0.97;
-}
-
-.RSTierAccent { width: 5px; height: 100%; }
-.tier1Accent { background-color: #4a8060; }
-.tier2Accent { background-color: #3a62a0; }
-.tier3Accent { background-color: #8048a0; }
-.tier4Accent { background-color: #a07028; }
-
-.RSTierContent
-{
-    flow-children: right;
-    vertical-align: center;
-    padding: 0px 18px;
-    width: fill-parent-flow( 1.0 );
-}
-
-.RSTierLabel
-{
-    font-size: 15px;
-    font-weight: bold;
-    color: #b8c8d8;
-    vertical-align: center;
-    width: fill-parent-flow( 1.0 );
-}
-
-.RSTierCostRow
-{
-    flow-children: right;
-    vertical-align: center;
-}
-
-.RSSoulsIcon
-{
-    width: 14px;
-    height: 14px;
-    vertical-align: center;
-    margin-right: 5px;
-    background-image: url("s2r://panorama/images/hud/hud_icon_gold.vsvg");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center center;
-    opacity: 0.75;
-}
-
-.RSTierCost
-{
-    font-size: 14px;
-    font-weight: semi-bold;
-    color: #e0c040;
-    vertical-align: center;
-}
-
-.RSNoItemsMsg
-{
-    font-size: 12px;
-    color: #b04040;
-    horizontal-align: center;
-    text-align: center;
-    margin-top: 10px;
-}
-
-/* -----------------------------------------------------------------
-   Rolled item block
-   ----------------------------------------------------------------- */
-#RSRolledView
-{
-    visibility: collapse;
+.RSFilter Label { vertical-align: center; font-size: 18px; color: #a290a0; }
+.RSFilterMark { width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; vertical-align: center; border: 1px solid #ab9ca9; }
+.rs-on.RSFilter { background-color: #473947; }
+.rs-on.RSFilter Label { color: #fff0df; }
+#RSFilterWeapon.rs-on .RSFilterMark { background-color: #f0a454; }
+#RSFilterVitality.rs-on .RSFilterMark { background-color: #8ac67a; }
+#RSFilterSpirit.rs-on .RSFilterMark { background-color: #c29bea; }
+.RSTierRow { margin-top: 16px; }
+.RSTier {
     flow-children: down;
-    width: 100%;
-    horizontal-align: center;
-    margin-top: 4px;
-    transition-property: opacity;
-    transition-duration: 0.2s;
-    opacity: 0;
+    width: fill-parent-flow(1);
+    height: 138px;
+    margin-right: 8px;
+    padding: 14px;
+    border-radius: 5px;
+    border-top: 4px solid #c7af77;
+    background-color: #453b42;
 }
-
-.rs-mode-rolled #RSRolledView
-{
-    visibility: visible;
-    opacity: 1;
+#RSTier2 { border-top: 4px solid #91bd9b; }
+#RSTier3 { border-top: 4px solid #99b7dc; }
+#RSTier4 { border-top: 4px solid #d7a3d5; }
+#RSFilterSpirit, #RSTier4 { margin-right: 0; }
+.RSTier:hover, .RSFilter:hover, .RSAction:hover { brightness: 1.3; }
+.RSNumeral { font-weight: bold; font-size: 44px; color: #fff2df; }
+.RSTierCost { font-size: 19px; color: #dfc48f; }
+.RSMessage { width: 100%; font-size: 20px; color: #e3d5cb; margin-top: 15px; }
+#RSRolledView {
+    visibility: collapse;
+    padding: 26px;
+    margin-top: 8px;
+    border-top: 3px solid #e0a168;
+    background-color: #372e36;
+    border-radius: 5px;
 }
-
-.RSDivider
-{
-    width: 100%;
-    height: 1px;
-    background-color: #1e2d48;
-    margin-bottom: 18px;
-    margin-top: 6px;
-}
-
-#RSBigIconWrapper
-{
-    width: 96px;
-    height: 96px;
-    horizontal-align: center;
-    background-color: #0a1020;
-    border: 1px solid #1e2d48;
-    border-radius: 6px;
-    margin-bottom: 14px;
-    box-shadow: 0px 0px 18px 5.0 #ffffff14;
-    overflow: noclip;
-    transition-property: pre-transform-scale2d, box-shadow;
-    transition-duration: 0.15s;
-}
-
-#RSRolledView:hover #RSBigIconWrapper
-{
-    pre-transform-scale2d: 1.06;
-    box-shadow: 0px 0px 26px 7.0 #f0d06055;
-}
-
-.RSOverlayImage
-{
-    width: 100%;
-    height: 100%;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center center;
-}
-
-.RSItemName
-{
-    font-size: 17px;
-    font-weight: bold;
-    color: #dce8f8;
-    horizontal-align: center;
-    text-align: center;
-    margin-bottom: 6px;
-}
-
-.RSItemTierLabel
-{
-    font-size: 12px;
-    font-weight: semi-bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    horizontal-align: center;
-    text-align: center;
-}
-
-.RSItemTierLabel.rs-tier1 { color: #4a8060; }
-.RSItemTierLabel.rs-tier2 { color: #3a62a0; }
-.RSItemTierLabel.rs-tier3 { color: #8048a0; }
-.RSItemTierLabel.rs-tier4 { color: #a07028; }
-
-.RSPurchaseStatus
-{
-    font-size: 11px;
-    color: #5090c8;
-    horizontal-align: center;
-    text-align: center;
-    margin-top: 6px;
-}
-
-/* -----------------------------------------------------------------
-   Affordability / availability dimming
-   ----------------------------------------------------------------- */
-.rs-cant-afford { opacity: 0.38; }
-.rs-cant-afford .RSTierCost { color: #c05050; }
-
-.rs-no-items { opacity: 0.28; }
-.rs-no-items .RSTierLabel { color: #704040; }
-.rs-no-items .RSTierCost  { color: #704040; }
+.rs-pending #RSRolledView { visibility: visible; }
+.rs-pending #RSPicker { visibility: collapse; }
+.RSEyebrow { color: #e9c38d; font-size: 17px; font-weight: bold; }
+.RSItemRow { margin-top: 20px; }
+#RSBigIconWrapper { width: 108px; height: 108px; border-radius: 6px; background-color: #201e27; border: 1px solid #826779; }
+#RSIconImage { width: 100%; height: 100%; }
+#RSFallbackTier { align: center center; font-size: 38px; color: #cfa7bf; font-weight: bold; }
+.rs-has-art #RSFallbackTier { visibility: collapse; }
+.RSItemInfo { width: fill-parent-flow(1); flow-children: down; vertical-align: center; margin-left: 20px; }
+#RSItemName { color: #fff2dd; font-size: 32px; font-weight: bold; }
+#RSPrice { color: #ebc977; font-size: 20px; }
+.RSProgressTrack { width: 100%; height: 6px; margin-top: 24px; background-color: #54454e; }
+#RSProgress { height: 100%; width: 0%; background-color: #d5ab67; }
+.RSAction { margin-top: 20px; padding: 9px 18px; background-color: #584452; border: 1px solid #99798b; border-radius: 4px; }
+.RSAction Label { color: #ffebde; font-size: 18px; }
+.rs-native-target #ModCard { border: 4px solid #f5a2ce; border-radius: 5px; }

@@ -1,0 +1,83 @@
+<!-- xml reconstructed by Source 2 Viewer 21.1.0.0 - https://valveresourceformat.github.io -->
+<root>
+	<styles>
+		<include src="s2r://panorama/styles/hud_quickbuy.vcss" />
+		<include src="s2r://panorama/styles/hud_quickbuy_entry.vcss" />
+	</styles>
+	<Panel class="HudQuickbuy" acceptsfocus="false">
+		<GlobalClassListener classes="gStreetBrawl gQuickbuyShopShowQueue gHighUnspentSouls" />
+		<Panel class="EmptyContents HudQuickbuyElement">
+			<Panel class="PurchaseDisabledContainer">
+				<Panel class="purchasingDisabledX disabledX1" />
+				<Panel class="purchasingDisabledX disabledX2" />
+			</Panel>
+			<Label class="QuickbuyLabel" text="#Citadel_Hud_Quickbuy" html="true" />
+			<Panel class="rightClick" />
+		</Panel>
+		<Panel id="HudMini" class="HudQuickbuyElement">
+			<Panel id="HudMiniFill" hittest="false" />
+			<Panel class="ItemsBlockedReason" hittest="false">
+				<Label class="SlotsFullLabel" text="#Citadel_Hud_Quickbuy_Exceeds_Slots" />
+				<Label class="SlotsLockedLabel" text="#Citadel_Hud_Quickbuy_ItemSlotsLocked" />
+			</Panel>
+			<Panel id="HudMiniContents">
+				<Panel class="PurchaseDisabledContainer">
+					<Panel class="purchasingDisabledX disabledX1" />
+					<Panel class="purchasingDisabledX disabledX2" />
+					<Panel id="DisabledCooldownMask" />
+				</Panel>
+				<CitadelHudQuickbuyEntry id="QuickbuyNext" />
+				<Panel class="ItemReadyIndicator">
+					<Label class="ItemReadyLabel" text="#Citadel_Hud_Quickbuy_ItemsReady" />
+				</Panel>
+				<Panel class="QueueSize">
+					<Label class="ItemReadyLabel" text="#Citadel_Hud_Quickbuy_ItemsReady" />
+				</Panel>
+			</Panel>
+		</Panel>
+		<Panel id="KeyboardHints">
+			<Label class="hudHint itemName" text="{s:quickbuy_item_name}" />
+			<Label class="hudHint combatText" text="#Citadel_Hud_Autobuy_HudHint_CantPurchase" />
+			<Label class="hudHint buyKey" text="#Citadel_Hud_Autobuy_HudHint_BuyKey" html="true" />
+			<Label class="hudHint shopKey" text="#Citadel_Hud_Autobuy_HudHint_ShopKey" html="true" />
+		</Panel>
+		<Panel id="QuickBuyQueueContainer" hittest="false">
+			<Panel class="QuickbuyQueueOuter">
+				<Label class="BuildOrderLabel" text="#Citadel_Shop_SelectedBuildHeader" />
+				<Label class="InstructionalText" text="#Citadel_Hud_BuildOrder_RemoveText" />
+				<Panel id="QuickbuySellQueue" />
+				<Panel id="QuickbuyQueue" />
+				<Panel id="QueueActions">
+					<CitadelSettingsCheckbox id="AutoQueueToggleButton" convar="citadel_auto_queue_build" text="#Citadel_Hud_BuildOrder_AutoQueue" />
+					<Panel id="ToggleAutoBuyContainer">
+						<ToggleButton id="AutoBuyToggleButton" text="#Citadel_Hud_BuildOrder_AutobuyToggle" html="true" onactivate="CitadelQuickbuyToggleAutoBuy()" />
+					</Panel>
+					<CitadelButton id="ClearQueueButton" class="Fill Small HasText" onmouseactivate="CitadelQuickbuyClearQueue();" text="#Citadel_Hud_BuildOrder_ClearQueue" />
+				</Panel>
+				<Label class="emptyQueueLabel" html="true" text="#Citadel_Hud_Quickbuy_Empty" />
+			</Panel>
+		</Panel>
+		<Panel class="QuickbuyShopSummaryContainer">
+			<Panel id="QuickbuyShopSummary" class="QuickbuyShopSummary" onmouseactivate="CitadelQuickbuyToggleShopQueue()">
+				<CitadelModIcon id="QuickbuyShopSummaryModIcon" class="QuickbuyShopSummaryModIcon" hittest="false" />
+				<Panel class="Labels">
+					<Panel class="BindingLabel">
+						<Panel class="quickbuy_icon" />
+						<Label class="ShopSummaryLabel" text="#Citadel_Hud_Quickbuy" />
+					</Panel>
+					<Panel class="quickbuy_details">
+						<Label class="ItemsReadyLabel" text="#Citadel_Hud_Quickbuy_ShopSummaryItemsInQueue:f" />
+						<Panel class="ItemsForSell">
+							<Panel class="sell_icon" />
+							<Label class="ItemsSellLabel" text="{d:sell_queue_size}" />
+						</Panel>
+					</Panel>
+				</Panel>
+			</Panel>
+		</Panel>
+	</Panel>
+	<scripts>
+		<include src="s2r://panorama/scripts/chaos_inventory.vjs" />
+		<include src="s2r://panorama/scripts/chaos_quickbuy.vjs" />
+	</scripts>
+</root>

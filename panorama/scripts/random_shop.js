@@ -1,648 +1,491 @@
-﻿(function () {
+(function () {
     'use strict';
 
-    var _Async = (typeof Async !== 'undefined') ? Async : null;
-    if (!_Async) {
-        _Async = {};
-        _Async.Delay = function (d) { return new Promise(function (r) { $.Schedule(d, r); }); };
-        _Async.NextFrame = function () { return _Async.Delay(0); };
-        _Async.Condition = function (pred) {
-            return new Promise(async function (resolve) {
-                while (true) {
-                    if (pred()) { resolve(); return; }
-                    await _Async.NextFrame();
-                }
-            });
-        };
+    var root = $.GetContextPanel();
+    var hud = root;
+    while (hud.GetParent() && hud.paneltype !== 'CitadelHud') hud = hud.GetParent();
+    if (hud.paneltype !== 'CitadelHud') hud = root;
+    // The HUD outlives the shop panel but belongs to the current game.
+    var instance = hud.GetAttributeInt('rs_shop_instance', 0) + 1;
+    hud.SetAttributeInt('rs_shop_instance', instance);
+    var current = null;
+    try { current = JSON.parse(hud.GetAttributeString('rs_reserved_item', 'null')); } catch (e) {}
+    var ru = typeof $.Language === 'function' ? $.Language() === 'russian' : /[А-Яа-яЁё]/.test($.Localize('#upgrade_close_range'));
+    var categories = ['Weapon', 'Vitality', 'Spirit'];
+    var categoryClasses = ['isWeapon', 'isArmor', 'isTech'];
+    var categoryLabels = ru ? ['Оружие', 'Живучесть', 'Дух'] : categories;
+    var enabled = [true, true, true];
+    var numerals = ['', 'I', 'II', 'III', 'IV'];
+    // Game item class -> artwork, equipment CSS class, and optional shared slot signature.
+    // Signatures include the item's category, tier and active/passive type in scripts/abilities.vdata.
+    var shopItems = {
+        upgrade_clip_size: ['weapon/basic_magazine', 'clipSize'],
+        upgrade_non_player_bonus: ['weapon/monster_rounds', 'reaperRounds'],
+        upgrade_non_player_bonus_sacrifice: ['weapon/cultist_sacrifice', '', true],
+        upgrade_chain_lightning: ['weapon/tesla_bullets', 'electrifiedBullets'],
+        upgrade_capacitor: ['weapon/capacitor', 'electrifiedBullets'],
+        upgrade_hollow_point_rounds: ['weapon/hollow_point', 'hollowPoint'],
+        upgrade_pristine_emblem: ['weapon/opening_rounds', 'pristineEmblem'],
+        upgrade_high_velocity_mag: ['weapon/high_velocity_rounds', 'highVelocityMag'],
+        upgrade_lifestrike_gauntlets: ['vitality/melee_lifesteal', 'lifestrikeGauntlets'],
+        upgrade_melee_rebuttal: ['vitality/rebuttal', 'parryRebuttal'],
+        upgrade_counterspell: ['vitality/counterspell', 'parryRebuttal'],
+        upgrade_weighted_shots: ['weapon/weighted_shots', 'closeRange'],
+        upgrade_ancient_shield: ['brawl/ancient_shielding', 'closeRange'],
+        upgrade_close_range: ['weapon/close_quarters', 'closeRange'],
+        upgrade_long_range: ['weapon/long_range', 'longRange'],
+        upgrade_slowing_bullets: ['weapon/slowing_bullets', 'slowingBullets'],
+        upgrade_inhibitor: ['vitality/inhibitor', 'inhibitor'],
+        upgrade_tech_defense_shredders: ['weapon/spirit_shredder_bullets', 'techResistShredder'],
+        upgrade_dps_aura: ['weapon/heroic_aura', 'bulletDamageAura'],
+        upgrade_targeted_silence: ['spirit/silence_glyph', 'targetedSilence'],
+        upgrade_haunting_scream: ['brawl/haunting_scream', 'targetedSilence'],
+        upgrade_proc_silence: ['weapon/silencer', 'empBullets'],
+        upgrade_silencer: ['weapon/silencer', 'empBullets'],
+        upgrade_berserker: ['weapon/berserker', 'berserker'],
+        upgrade_fervor: ['weapon/frenzy', 'fervor'],
+        upgrade_siphon_bullets: ['vitality/siphon_bullets', 'siphon_bullets'],
+        upgrade_headshot_booster: ['weapon/headshot_booster', 'headshotBooster'],
+        upgrade_headshot_booster2: ['weapon/weakening_headshot', 'headshotBooster'],
+        upgrade_sharpshooter: ['weapon/sharp_shooter', 'longshot'],
+        upgrade_headhunter: ['weapon/headhunter', 'headhunter'],
+        upgrade_spellslinger_headshots: ['weapon/spellslinger_headshots', 'spellslingerHeadshots'],
+        upgrade_banshee_slugs: ['weapon/crippling_headshot', 'bansheeSlugs'],
+        upgrade_crackshot: ['weapon/mystic_shot', 'explosiveBullets'],
+        upgrade_critshot: ['weapon/lucky_shot', 'critshot'],
+        upgrade_close_quarter_combat: ['weapon/point_blank', 'pointBlank'],
+        upgrade_toxic_bullets: ['weapon/toxic_bullets', 'toxicBullets'],
+        upgrade_ricochet: ['weapon/ricochet', 'ricochet'],
+        upgrade_apex_combat: ['brawl/apex_combat', 'ricochet'],
+        upgrade_health: ['vitality/extra_health', 'upgrade_health'],
+        upgrade_bullet_armor: ['vitality/bullet_resilience', 'bulletArmor', true],
+        upgrade_tech_armor: ['vitality/spirit_resilience', 'techArmor'],
+        upgrade_vampire: ['vitality/bullet_lifesteal', 'healthSstealingBullets'],
+        upgrade_debuff_reducer: ['vitality/debuff_reducer', 'debuffReducer'],
+        upgrade_reduce_debuff_duration: ['vitality/debuff_remover', 'debuffRemover'],
+        upgrade_tech_purge: ['vitality/spirit_resilience', 'techPurge'],
+        upgrade_improved_bullet_armor: ['vitality/bullet_resilience', 'improvedBulletArmor'],
+        upgrade_metal_skin: ['vitality/metal_skin', 'metalSkin'],
+        upgrade_healing_booster: ['vitality/healing_booster', 'healingBooster'],
+        upgrade_chonky: ['vitality/fortitude', 'revitalizer'],
+        upgrade_damage_recycler: ['vitality/leech', 'leech'],
+        upgrade_sprint_booster: ['vitality/sprint_boots', 'sprintBooster'],
+        upgrade_trophy_collector: ['vitality/trophy_collector', 'sprintBooster'],
+        upgrade_cardio_calibrator: ['vitality/enduring_speed', 'cardioCalibrator'],
+        upgrade_superior_stamina: ['vitality/stamina_mastery', 'superiorStamina'],
+        upgrade_aerial_supremacy: ['brawl/aerial_mastery', 'superiorStamina'],
+        upgrade_rapid_rounds: ['weapon/rapid_rounds', 'rapidRounds'],
+        upgrade_improved_stamina: ['vitality/extra_stamina', 'improvedStamina'],
+        upgrade_bullet_armor_reduction_aura: ['weapon/hunters_aura', 'bulletArmorReductionAura'],
+        upgrade_grit: ['vitality/grit', 'bulletShield'],
+        upgrade_weapon_shielding: ['vitality/weapon_shielding', 'bulletShield', true],
+        upgrade_spirit_bubble: ['vitality/spirit_shielding', 'bulletShield', true],
+        upgrade_regenerating_bullet_shield: ['vitality/battle_vest', 'bulletShield', true],
+        upgrade_magic_shield: ['vitality/enchanters_emblem', 'techArmorPulse'],
+        upgrade_improved_spirit: ['spirit/extra_spirit', 'techPower'],
+        upgrade_mystic_regeneration: ['spirit/mystic_regen', 'endurance'],
+        upgrade_soaring_spirit: ['spirit/improved_spirit', 'soaringSpirit'],
+        upgrade_tech_overflow: ['weapon/spiritual_overflow', 'magicOverflow'],
+        upgrade_return_fire: ['vitality/return_fire', 'lastStand'],
+        upgrade_tech_range: ['spirit/greater_expansion', 'spiritualDominion'],
+        upgrade_magic_reach: ['spirit/mystic_reach', 'techRange'],
+        upgrade_extra_charge: ['spirit/extra_charge', 'extraCharge'],
+        upgrade_health_stealing_magic: ['vitality/spirit_lifesteal', 'healthStealingTech'],
+        upgrade_bullet_resist_shredder: ['spirit/bullet_resist_shredder', 'bulletResistShredder'],
+        upgrade_mystic_reverb: ['spirit/mystic_reverb', 'magicReverb'],
+        upgrade_magic_burst: ['spirit/mystic_burst', 'magicBurst'],
+        upgrade_magic_shock: ['spirit/tankbuster', 'magicShock'],
+        upgrade_magic_vulnerability: ['spirit/mystic_vulnerability', 'techVulnerability'],
+        upgrade_healbane: ['vitality/healbane', 'healbane'],
+        upgrade_magic_slow: ['spirit/mystic_slow', 'slowingTech'],
+        upgrade_escalating_exposure: ['spirit/escalating_exposure', 'escalatingExposure', true],
+        upgrade_rapid_recharge: ['spirit/rapid_recharge', 'rapidRecharge'],
+        upgrade_omnicharge_pendant: ['brawl/omnicharge_pendant', 'rapidRecharge'],
+        upgrade_magic_tempo: ['spirit/improved_cooldown', 'advancedRecharge'],
+        upgrade_cooldown_reduction: ['spirit/superior_cooldown', 'spiritualFlow'],
+        upgrade_transcendent_cooldown: ['spirit/transcendent_cooldown', '', true],
+        upgrade_timeless_emblem: ['brawl/timeless_emblem', '', true],
+        upgrade_shadow_step: ['brawl/shadow_step', 'warpStone'],
+        upgrade_containment: ['spirit/slowing_hex', 'immobilize'],
+        upgrade_spirit_sap: ['spirit/spirit_sap', 'focusedSilence'],
+        upgrade_focus_lens: ['spirit/focus_lens', 'focusedSilence'],
+        upgrade_withering_whip: ['spirit/rusted_barrel', 'slowingTech'],
+        upgrade_greater_withering_whip: ['spirit/disarming_hex', 'disarm'],
+        upgrade_rescue_beam: ['vitality/rescue_beam', 'medicBeam'],
+        upgrade_rupture: ['spirit/decay', 'rupture'],
+        upgrade_discord: ['spirit/scourge', 'rupture'],
+        upgrade_target_stun: ['spirit/knockdown', 'knockdown'],
+        upgrade_phantom_strike: ['vitality/phantom_strike', 'phantomStrike'],
+        upgrade_warp_stone: ['vitality/warp_stone', 'warpStone'],
+        upgrade_aoe_root: ['spirit/vortex_web', 'areaImmobilize'],
+        upgrade_ability_refresher: ['spirit/refresher', 'abilityRefresher'],
+        upgrade_ability_power_shard: ['spirit/echo_shard', 'powerShard'],
+        upgrade_tech_damage_pulse: ['spirit/torment_pulse', 'tormentAura'],
+        upgrade_cheat_death: ['vitality/cheat_death', 'tormentAura'],
+        upgrade_cloaking_device_active: ['weapon/shadow_weave', 'cloakingDevice'],
+        upgrade_rocket_booster: ['vitality/majestic_leap', 'rocketBooster'],
+        upgrade_health_nova: ['vitality/healing_nova', 'healthNova'],
+        upgrade_restorative_locket: ['vitality/restorative_locket', 'restorativeLocket'],
+        upgrade_health_stimpak: ['vitality/healing_rite', 'stimPak'],
+        upgrade_shrink_ray: ['brawl/shrink_ray', 'stimPak'],
+        upgrade_infuser: ['vitality/infuser', 'infuser'],
+        upgrade_guardian_ward: ['vitality/guardian_ward', 'savior'],
+        upgrade_divine_barrier: ['vitality/divine_barrier', 'savior'],
+        upgrade_thermal_detonator: ['weapon/alchemical_fire', 'techGrenade'],
+        upgrade_blood_tribute: ['weapon/blood_tribute', '', true],
+        upgrade_fleetfoot_boots: ['weapon/fleetfoot', 'fleetfootBoots'],
+        upgrade_kinetic_sash: ['weapon/kinetic_dash', 'kineticSash'],
+        upgrade_arcane_surge: ['spirit/arcane_surge', 'arcaneSurge'],
+        upgrade_unstoppable: ['vitality/unstoppable', 'unstoppable'],
+        upgrade_colossus: ['vitality/colossus', 'colossus'],
+        upgrade_cold_front: ['spirit/cold_front', 'iceBlast'],
+        upgrade_arctic_blast: ['spirit/arctic_blast', 'iceBlast'],
+        upgrade_self_bubble: ['spirit/ethereal_shift', 'shiftingShroud'],
+        upgrade_glitch: ['spirit/curse', 'glitch'],
+        upgrade_arcane_extension: ['spirit/duration_extender', 'durationExtender'],
+        upgrade_imbued_duration_extender: ['spirit/superior_duration', 'superiorDuration'],
+        upgrade_glass_cannon: ['weapon/glass_cannon', 'glassCannon', true],
+        upgrade_fury_trance: ['vitality/fury_trance', 'surgingPower'],
+        upgrade_surging_power: ['vitality/vampiric_burst', 'surgingPower'],
+        upgrade_boxing_glove: ['vitality/lifestrike', 'boxingGlove'],
+        upgrade_acolytes_glove: ['spirit/spirit_strike', 'acolytesGlove'],
+        upgrade_spirit_snatch: ['spirit/spirit_snatch', 'spiritSnatch'],
+        upgrade_melee_charge: ['weapon/melee_charge', 'meleeCharge'],
+        upgrade_crushing_fists: ['weapon/crushing_fists', 'meleeCharge'],
+        upgrade_diviners_kevlar: ['vitality/diviners_kevlar', 'bulletShield'],
+        upgrade_resonant_healing: ['spirit/radiant_regeneration', 'megaSpirit'],
+        upgrade_boundless_spirit: ['spirit/boundless_spirit', 'megaSpirit'],
+        upgrade_burst_fire: ['weapon/burst_fire', 'fireRatePlusPlus', true],
+        upgrade_endurance: ['vitality/extra_regen', 'endurance'],
+        upgrade_magic_storm: ['spirit/surge_of_power', 'magicStorm'],
+        upgrade_suppressor: ['spirit/suppressor', 'weaponJammer'],
+        upgrade_quick_silver: ['spirit/quicksilver_reload', 'fireRatePlus'],
+        upgrade_ethereal_bullets: ['spirit/mercurial_magnum', 'fireRatePlus'],
+        upgrade_intensifying_clip: ['weapon/intensifying_magazine', 'intensifyingClip'],
+        upgrade_reinforcing_casings: ['weapon/escalating_resilience', 'reinforcingCasings'],
+        upgrade_blitz_bullets: ['weapon/swift_striker', 'fireRatePlus', true],
+        upgrade_veil_walker: ['vitality/veil_walker', 'veilWalker'],
+        upgrade_vex_barrier: ['vitality/reactive_barrier', 'vexBarrier'],
+        upgrade_auto_cleanse: ['vitality/indomitable', '', true],
+        upgrade_medic_bullets: ['weapon/restorative_shot', 'medicBullets'],
+        upgrade_titan_round: ['weapon/titanic_magazine', 'titanicMagazine'],
+        upgrade_split_shot: ['weapon/split_shot', 'titanicMagazine'],
+        upgrade_active_reload: ['weapon/active_reload', 'activeReload'],
+        upgrade_magic_carpet: ['spirit/magic_carpet', 'magicCarpet'],
+        upgrade_spirit_burn: ['spirit/spirit_burn', 'escalatingExposure', true],
+        upgrade_ultimate_burst: ['spirit/lightning_scroll', 'ultimateBurst'],
+        upgrade_absorbing_armor: ['vitality/witchmail', 'absorbingArmor', true],
+        upgrade_healbuff: ['vitality/healing_tempo', 'healBuff'],
+        upgrade_aprounds: ['weapon/armor_piercing_rounds', 'armorBreakingBullets'],
+        upgrade_infinite_rounds: ['brawl/infinite_rounds', 'armorBreakingBullets'],
+        upgrade_deflecting_armor: ['vitality/plated_armor', 'absorbingArmor', true],
+        upgrade_spellbreaker: ['vitality/spellbreaker', '', true],
+        upgrade_juggernaut: ['vitality/juggernaut', 'juggernaut'],
+        upgrade_enchanted_holsters: ['weapon/spell_slinger', '', true],
+        upgrade_weapon_backstabber: ['weapon/backstabber', '', true],
+        upgrade_express_shot: ['weapon/express_shot', '', true],
+        upgrade_icarus_wings: ['brawl/icarus_wings', '', true],
+        upgrade_mystical_piano: ['brawl/mystical_piano', '', true],
+        upgrade_nullification_aura: ['brawl/nullification_aura', '', true],
+        upgrade_celestial_guidance: ['brawl/celestial_guidance', 'debuffReducer'],
+        upgrade_eternal_gift: ['brawl/eternal_gift', '', true],
+        upgrade_patrons_blessing: ['brawl/patrons_blessing', '', true],
+        upgrade_eldritch_shot: ['brawl/eldritch_shot', 'explosiveBullets'],
+        upgrade_cloak_of_opportunity: ['brawl/cloak_of_opportunity', '', true],
+        upgrade_runed_gauntlets: ['brawl/runed_gauntlets', '', true],
+        upgrade_electric_slippers: ['brawl/electric_slippers', '', true],
+        upgrade_prism_blast: ['brawl/prism_blast', 'shiftingShroud'],
+        upgrade_unstable_concoction: ['brawl/unstable_concoction', '', true],
+        upgrade_shivas_bracelet: ['brawl/frostbite', '', true],
+        upgrade_shadow_strike: ['brawl/shadow_strike', '', true],
+        upgrade_bulletshredimbue: ['weapon/alchemical_seal', 'fireRatePlus'],
+        upgrade_rechargingbullets: ['weapon/recharging_rounds', 'absorbingArmor'],
+        upgrade_goose_egg: ['spirit/goose_egg', 'techPower']
+    };
+    var rollTier = 0;
+    var loadTries = 0;
+    var scheduled = false;
+    var highlighted = null;
+    var targetCards = [];
+    var refreshCardsAt = 0;
+    var followTarget = false;
+    var tabClass = '';
+    var tabGraceUntil = 0;
+
+    function panel(id) { return root.FindChildTraverse(id); }
+    function label(id, text) {
+        var p = panel(id);
+        if (p && p.text !== text) p.text = text;
     }
-
-    var ALL_MOD_CLASSES = [
-        'closeRange', 'clipSize', 'item_passive', 'headshotBooster', 'berserker',
-        'highVelocityMag', 'rapidRounds', 'medicBullets', 'activeReload', 'fleetfootBoots',
-        'intensifyingClip', 'kineticSash', 'longRange', 'meleeCharge', 'explosiveBullets',
-        'pristineEmblem', 'absorbingArmor', 'slowingBullets', 'techResistShredder',
-        'titanicMagazine', 'fireRatePlus', 'armorBreakingBullets', 'bansheeSlugs', 'fervor',
-        'glassCannon', 'critshot', 'ricochet', 'empBullets', 'magicOverflow', 'headhunter',
-        'bulletDamageAura', 'hollowPoint', 'bulletArmorReductionAura', 'pointBlank',
-        'cloakingDevice', 'longshot', 'spellslingerHeadshots', 'electrifiedBullets',
-        'toxicBullets', 'techGrenade', 'item_gadget', 'fireRatePlusPlus', 'item_gadget_enemy',
-        'reinforcingCasings',
-        'upgrade_health', 'healthSstealingBullets', 'endurance', 'improvedStamina',
-        'bulletShield', 'stimPak', 'lifestrikeGauntlets', 'parryRebuttal', 'sprintBooster',
-        'healthStealingBullets', 'debuffReducer', 'techArmorPulse', 'cardioCalibrator',
-        'savior', 'healbane', 'healingBooster', 'vexBarrier', 'restorativeLocket', 'lastStand',
-        'healthStealingTech', 'improvedBulletArmor', 'debuffRemover', 'revitalizer',
-        'surgingPower', 'healthNova', 'boxingGlove', 'rocketBooster', 'metalSkin', 'medicBeam',
-        'techPurge', 'superiorStamina', 'veilWalker', 'warpStone', 'tormentAura', 'colossus',
-        'healBuff', 'infuser', 'inhibitor', 'juggernaut', 'leech', 'phantomStrike',
-        'siphon_bullets', 'unstoppable',
-        'extraCharge', 'goldenEgg', 'techPower', 'magicBurst', 'techRange', 'slowingTech', 'acolytesGlove',
-        'arcaneSurge', 'bulletResistShredder', 'iceBlast', 'advancedRecharge', 'durationExtender',
-        'soaringSpirit', 'techVulnerability', 'immobilize', 'focusedSilence', 'weaponJammer',
-        'rupture', 'disarm', 'spiritualDominion', 'knockdown', 'megaSpirit', 'rapidRecharge',
-        'targetedSilence', 'spiritSnatch', 'spiritualFlow', 'superiorDuration', 'magicStorm',
-        'magicShock', 'glitch', 'powerShard', 'escalatingExposure', 'shiftingShroud',
-        'ultimateBurst', 'magicCarpet', 'magicReverb', 'abilityRefresher', 'areaImmobilize'
-    ];
-
-    var ALL_SHOWING = ['showingWeapon', 'showingArmor', 'showingTech', 'showingFavorites', 'showingSearch'];
-    var LIST_IDS    = ['ShopModsListWeapon', 'ShopModsListArmor', 'ShopModsListTech'];
-    var TIER_COSTS  = { 1: 800, 2: 1600, 3: 3200, 4: 6400 };
-
-    // Suppresses the native-tab watcher while loadAllItemsThenRoll dispatches
-    // CitadelShopModsActivate to populate item lists.
-    var _suppressDeactivation = false;
-
-    // Snapshot of showingX classes that were present when Random tab was activated.
-    // The watcher only deactivates if a NEW showingX class appears (not one from this list).
-    var _activatedWithShowing = [];
-
-    var state = { mode: 'idle', itemClass: '', itemTier: 0, itemListId: '', itemType: 0 };
-
-    var _enabledLists = { 'ShopModsListWeapon': true, 'ShopModsListArmor': true, 'ShopModsListTech': true };
-    var LIST_FILTER_IDS   = { 'ShopModsListWeapon': 'RSFilterWeapon', 'ShopModsListArmor': 'RSFilterArmor', 'ShopModsListTech': 'RSFilterTech' };
-    var CATEGORY_NAMES    = { 'ShopModsListWeapon': 'Weapon', 'ShopModsListArmor': 'Vitality', 'ShopModsListTech': 'Spirit' };
-
-    function getEnabledCatString() {
-        var cats = [];
-        for (var i = 0; i < LIST_IDS.length; i++) {
-            if (_enabledLists[LIST_IDS[i]]) cats.push(CATEGORY_NAMES[LIST_IDS[i]]);
-        }
-        return cats.join('/');
+    function persist() {
+        hud.SetAttributeString('rs_reserved_item', JSON.stringify(current));
+        root.SetHasClass('rs-pending', !!current);
     }
-
-    // ============================================================
-    // Random tab activation / deactivation
-    // ============================================================
-    function snapshotShowingClasses(root) {
-        _activatedWithShowing = [];
-        for (var i = 0; i < ALL_SHOWING.length; i++) {
-            if (root.BHasClass(ALL_SHOWING[i])) _activatedWithShowing.push(ALL_SHOWING[i]);
-        }
+    function validName(value) {
+        return typeof value === 'string' && value.length > 0 && !/[{}]/.test(value);
     }
-
-    function ActivateRandomTab() {
-        var root = $.GetContextPanel();
-        snapshotShowingClasses(root);
-        root.AddClass('gShowingRandom');
-        updateAffordability();
-        $.Msg('[RandomShop] Random tab activated');
+    function itemName(card) {
+        var names = card.FindChildrenWithClassTraverse('modName');
+        var name = names.length ? names[0].text : '';
+        if (!validName(name) && typeof card.GetDialogVariable === 'function') name = card.GetDialogVariable('mod_name');
+        return validName(name) ? name : '';
     }
-
-    function DeactivateRandomTab() {
-        var root = $.GetContextPanel();
-        if (!root.BHasClass('gShowingRandom')) return;
-        root.RemoveClass('gShowingRandom');
-        if (state.mode === 'rolled') {
-            state.itemClass = ''; state.itemTier = 0; state.itemListId = ''; state.itemType = 0;
-            setMode('idle');
-            var msg = root.FindChildTraverse('RSNoItemsMsg');
-            if (msg) msg.text = '';
-            var status = root.FindChildTraverse('RSPurchaseStatus');
-            if (status) status.text = '';
-        }
-        $.Msg('[RandomShop] Random tab deactivated');
+    function amount(container, id) {
+        var p = container && container.FindChildTraverse(id);
+        return parseAmount(p && p.text);
     }
-
-    // Poll every 50ms: deactivate Random tab only when a NEW showingX class appears
-    // (one that was not present when Random was activated). This prevents false
-    // triggers from the pre-existing showingX class of the previously active tab.
-    function watchNativeTabActivation() {
-        if (!_suppressDeactivation) {
-            var root = $.GetContextPanel();
-            if (root.BHasClass('gShowingRandom')) {
-                for (var i = 0; i < ALL_SHOWING.length; i++) {
-                    if (root.BHasClass(ALL_SHOWING[i])) {
-                        var wasPresent = false;
-                        for (var j = 0; j < _activatedWithShowing.length; j++) {
-                            if (_activatedWithShowing[j] === ALL_SHOWING[i]) { wasPresent = true; break; }
-                        }
-                        if (!wasPresent) { DeactivateRandomTab(); break; }
-                    }
-                }
-            }
-        }
-        $.Schedule(0.05, watchNativeTabActivation);
+    function parseAmount(value) {
+        var digits = String(value || '').replace(/[\s\u00a0\u202f.,']/g, '');
+        return /^\d+$/.test(digits) ? Number(digits) : null;
     }
-
-    // ============================================================
-    // Helpers
-    // ============================================================
-    function getTierFromPanel(panel, listRoot) {
-        var p = panel;
-        while (p && p !== listRoot) {
-            var pid = p.id || '';
-            if (pid.length > 0 && pid.toLowerCase().indexOf('tier') !== -1) {
-                var digits = pid.replace(/\D/g, '');
-                if (digits.length > 0) return parseInt(digits, 10);
-            }
-            p = p.GetParent();
-        }
-        return 0;
-    }
-
-    var ITEM_TYPE_ATTRS = ['ItemType', 'item_type', 'upgrade_type', 'item_id', 'shopmod_type', 'component_type', 'upgradeid'];
-
-    function getItemType(iconPanel) {
-        if (!iconPanel || !iconPanel.IsValid()) return 0;
-        var p = iconPanel;
-        for (var i = 0; i < 8; i++) {
-            if (!p || !p.IsValid()) break;
-            for (var a = 0; a < ITEM_TYPE_ATTRS.length; a++) {
-                var t = p.GetAttributeInt(ITEM_TYPE_ATTRS[a], 0);
-                if (t) { $.Msg('[RandomShop] getItemType=' + t + ' attr=' + ITEM_TYPE_ATTRS[a]); return t; }
-            }
-            p = p.GetParent();
-        }
-        return 0;
-    }
-
-    function collectItemsForTier(tierNum) {
-        var root = $.GetContextPanel(); var result = [];
-        for (var li = 0; li < LIST_IDS.length; li++) {
-            if (!_enabledLists[LIST_IDS[li]]) continue;
-            var list = root.FindChildTraverse(LIST_IDS[li]);
-            if (!list || !list.IsValid()) continue;
-            for (var ci = 0; ci < ALL_MOD_CLASSES.length; ci++) {
-                var icons = list.FindChildrenWithClassTraverse(ALL_MOD_CLASSES[ci]);
-                for (var ii = 0; ii < icons.length; ii++) {
-                    var icon = icons[ii];
-                    if (!icon || !icon.IsValid()) continue;
-                    if (icon.BHasClass('owned')) continue;
-                    if (icon.BHasClass('usedAsComponent')) continue;
-                    if (icon.BHasClass('itemDisabled')) continue;
-                    var tier = getTierFromPanel(icon, list);
-                    if (tier !== tierNum) continue;
-                    var dup = false;
-                    for (var di = 0; di < result.length; di++) { if (result[di].icon === icon) { dup = true; break; } }
-                    if (!dup) result.push({ icon: icon, type: getItemType(icon), cls: ALL_MOD_CLASSES[ci], listId: LIST_IDS[li] });
-                }
-            }
-        }
-        return result;
-    }
-
-    // Collect all numbers from labels in a panel tree into out[].
-    function collectNumbers(panel, out, depth) {
-        if (!panel || !panel.IsValid() || (depth || 0) > 6) return;
-        if ((panel.paneltype || '').toLowerCase() === 'label') {
-            var text = panel.text || '';
-            if (/[0-9]/.test(text)) {
-                var n = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                if (!isNaN(n)) out.push(n);
-            }
-        }
-        for (var i = 0; i < panel.GetChildCount(); i++) {
-            collectNumbers(panel.GetChild(i), out, (depth || 0) + 1);
-        }
-    }
-
-    function getSouls() {
-        try {
-            var root = $.GetContextPanel();
-            var goldAP = root.FindChildTraverse('GoldAPContainer');
-            if (goldAP && goldAP.IsValid()) {
-                var nums = [];
-                collectNumbers(goldAP, nums, 0);
-                if (nums.length > 0) {
-                    $.Msg('[RandomShop] GoldAP nums=' + nums.join(','));
-                    // Souls are at index 2 in GoldAPContainer's label list.
-                    var souls = nums.length > 2 ? nums[2] : nums[0];
-                    $.Msg('[RandomShop] getSouls GoldAP=' + souls);
-                    return souls;
-                }
-            }
-            // Fallback: SoulAmount shows total collected (less accurate)
-            var soulPanel = root.FindChildTraverse('SoulAmount');
-            if (soulPanel && soulPanel.IsValid()) {
-                var nums2 = [];
-                collectNumbers(soulPanel, nums2, 0);
-                if (nums2.length > 0) {
-                    nums2.sort(function (a, b) { return b - a; });
-                    $.Msg('[RandomShop] getSouls SoulAmount(fallback)=' + nums2[0]);
-                    return nums2[0];
-                }
-            }
-        } catch (e) { $.Msg('[RandomShop] getSouls error: ' + e); }
+    function getCategory(card) {
+        for (var i = 0; i < categories.length; i++) if (card.BHasClass(categoryClasses[i])) return i;
         return -1;
     }
-
-    function setMode(mode) {
-        state.mode = mode;
-        $.GetContextPanel().SetHasClass('rs-mode-rolled', mode === 'rolled');
-    }
-
-    // Maps JS class name (+ optional '|listId') to internal item name (= image filename without _psd.vtex).
-    // Source: ability_icons.css — the image filename IS the localization key suffix (#upgrade_X).
-    var ITEM_LOCKEYS = {
-        // --- Weapon ---
-        'activeReload':                             'active_reload',
-        'armorBreakingBullets':                     'armor_breaking_bullets',
-        'bansheeSlugs':                             'banshee_slugs',
-        'berserker':                                'berserker',
-        'bulletArmorReductionAura':                 'bullet_armor_reduction_aura',
-        'bulletDamageAura':                         'bullet_damage_aura',
-        'closeRange':                               'close_range',
-        'cloakingDevice':                           'cloaking_device',
-        'critshot':                                 'crit_damage',
-        'electrifiedBullets':                       'electrified_bullets',
-        'empBullets':                               'emp_bullets',
-        'explosiveBullets':                         'explosive_bullets',
-        'fervor':                                   'fervor',
-        'fleetfootBoots':                           'fleetfoot_boots',
-        'glassCannon':                              'glass_cannon',
-        'headhunter':                               'headhunter',
-        'headshotBooster':                          'headshot_booster',
-        'highVelocityMag':                          'high_velocity_mag',
-        'hollowPoint':                              'hollow_point',
-        'clipSize':                                 'clip_size',
-        'intensifyingClip':                         'auto_reloader',
-        'item_gadget':                              'item_gadget',
-        'item_gadget_enemy':                        'item_gadget_enemy',
-        'kineticSash':                              'kinetic_sash',
-        'longRange':                                'long_range',
-        'longshot':                                 'longshot',
-        'magicOverflow':                            'magic_overflow',
-        'medicBullets':                             'medic_bullets',
-        'meleeCharge':                              'melee_charge',
-        'pointBlank':                               'point_blank',
-        'pristineEmblem':                           'pristine_emblem',
-        'rapidRounds':                              'rapid_rounds',
-        'reinforcingCasings':                       'bullet_armor_plus',
-        'ricochet':                                 'ricochet',
-        'slowingBullets':                           'slowing_bullets',
-        'spellslingerHeadshots':                    'spellslinger_headshots',
-        'techGrenade':                              'thermal_detonator',
-        'techResistShredder':                       'tech_resist_shredder',
-        'titanicMagazine':                          'titanic_magazine',
-        'toxicBullets':                             'toxic_bullets',
-        // --- Ambiguous: same CSS class, different list ---
-        'absorbingArmor|ShopModsListWeapon':        'arcane_medallion',
-        'absorbingArmor|ShopModsListArmor':         'arcane_medallion',
-        'item_passive|ShopModsListWeapon':          'item_passive',
-        'item_passive|ShopModsListArmor':           'item_passive',
-        'item_passive|ShopModsListTech':            'item_passive',
-        'fireRatePlus|ShopModsListWeapon':          'fire_rate_plus',
-        'fireRatePlusPlus|ShopModsListWeapon':      'fire_rate_plus_plus',
-        'fireRatePlus|ShopModsListTech':            'fire_rate_plus',
-        'fireRatePlusPlus|ShopModsListTech':        'fire_rate_plus_plus',
-        'endurance|ShopModsListArmor':              'endurance',
-        'endurance|ShopModsListTech':               'endurance',
-        'tormentAura|ShopModsListArmor':            'torment_aura',
-        'tormentAura|ShopModsListTech':             'torment_aura',
-        // --- Vitality ---
-        'boxingGlove':                              'boxing_glove',
-        'bulletShield':                             'bullet_shield',
-        'cardioCalibrator':                         'cardio_calibrator',
-        'colossus':                                 'colossus',
-        'debuffReducer':                            'debuff_reducer',
-        'debuffRemover':                            'debuff_remover',
-        'healBuff':                                 'heal_buff',
-        'healbane':                                 'healbane',
-        'healthNova':                               'health_nova',
-        'healthSstealingBullets':                   'health_stealing_bullets',
-        'healthStealingBullets':                    'health_stealing_bullets',
-        'healthStealingTech':                       'health_stealing_tech',
-        'healingBooster':                           'healing_booster',
-        'improvedBulletArmor':                      'improved_bullet_armor',
-        'improvedStamina':                          'improved_stamina',
-        'infuser':                                  'infuser',
-        'inhibitor':                                'inhibitor',
-        'juggernaut':                               'juggernaut',
-        'lastStand':                                'return_fire',
-        'leech':                                    'leech',
-        'lifestrikeGauntlets':                      'lifestrike_gauntlets',
-        'medicBeam':                                'medic_beam',
-        'metalSkin':                                'metal_skin',
-        'parryRebuttal':                            'parry_rebuttal',
-        'phantomStrike':                            'phantom_strike',
-        'restorativeLocket':                        'restorative_locket',
-        'revitalizer':                              'revitalizer',
-        'rocketBooster':                            'rocket_booster',
-        'savior':                                   'savior',
-        'siphon_bullets':                           'siphon_bullets',
-        'sprintBooster':                            'sprint_booster',
-        'stimPak':                                  'stimpak',
-        'superiorStamina':                          'superior_stamina',
-        'surgingPower':                             'vampiric_burst',
-        'techArmorPulse':                           'tech_shield_pulse',
-        'techPurge':                                'tech_purge',
-        'unstoppable':                              'unstoppable',
-        'upgrade_health':                           'health',
-        'veilWalker':                               'veil_walker',
-        'vexBarrier':                               'last_stand',
-        'warpStone':                                'warp_stone',
-        // --- Spirit ---
-        'abilityRefresher':                         'refresher_module',
-        'acolytesGlove':                            'acolytes_glove',
-        'advancedRecharge':                         'advanced_recharge',
-        'areaImmobilize':                           'area_immobilize',
-        'arcaneSurge':                              'arcane_surge',
-        'bulletResistShredder':                     'bullet_resist_shredder',
-        'disarm':                                   'disarm',
-        'durationExtender':                         'duration_extender',
-        'escalatingExposure':                       'escalating_exposure',
-        'extraCharge':                              'extra_charge',
-        'goldenEgg':                                'golden_egg',
-        'focusedSilence':                           'focused_silence',
-        'glitch':                                   'glitch',
-        'iceBlast':                                 'ice_blast',
-        'immobilize':                               'immobilize',
-        'knockdown':                                'knockdown',
-        'magicBurst':                               'magic_burst',
-        'magicCarpet':                              'magic_carpet',
-        'magicReverb':                              'magic_reverb',
-        'magicShock':                               'magic_shock',
-        'magicStorm':                               'magic_storm',
-        'megaSpirit':                               'boundless_spirit',
-        'powerShard':                               'echo_shard',
-        'rapidRecharge':                            'rapid_recharge',
-        'rupture':                                  'rupture',
-        'shiftingShroud':                           'shifting_shroud',
-        'slowingTech':                              'slowing_tech',
-        'soaringSpirit':                            'soaring_spirit',
-        'spiritSnatch':                             'spirit_snatch',
-        'spiritualDominion':                        'spiritual_dominion',
-        'spiritualFlow':                            'spiritual_flow',
-        'superiorDuration':                         'arcane_persistance',
-        'targetedSilence':                          'targeted_silence',
-        'techPower':                                'tech_damage',
-        'techRange':                                'tech_range',
-        'techVulnerability':                        'tech_vulnerability',
-        'ultimateBurst':                            'adrenaline_rush',
-        'weaponJammer':                             'weapon_jammer',
-    };
-
-    function getItemName(itemClass, listId) {
-        var internalName = ITEM_LOCKEYS[itemClass + '|' + listId] || ITEM_LOCKEYS[itemClass];
-        if (internalName) {
-            var key = '#upgrade_' + internalName;
-            var loc = $.Localize(key);
-            if (loc && loc !== key) return loc;
-            // Localize failed — convert snake_case to Title Case
-            return internalName.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-        }
-        return itemClass;
-    }
-
-    function updateRolledDisplay() {
-        var root = $.GetContextPanel();
-        var wrapper = root.FindChildTraverse('RSBigIconWrapper');
-        if (wrapper) {
-            for (var ci = 0; ci < ALL_MOD_CLASSES.length; ci++) wrapper.RemoveClass(ALL_MOD_CLASSES[ci] + '-style');
-            for (var li = 0; li < LIST_IDS.length; li++) wrapper.RemoveClass(LIST_IDS[li]);
-            if (state.itemClass) wrapper.AddClass(state.itemClass + '-style');
-            if (state.itemListId) wrapper.AddClass(state.itemListId);
-        }
-        var nameLabel = root.FindChildTraverse('RSItemName');
-        if (nameLabel) nameLabel.text = getItemName(state.itemClass, state.itemListId);
-        var tierLabel = root.FindChildTraverse('RSItemTier');
-        if (tierLabel) {
-            tierLabel.text = 'Tier ' + state.itemTier;
-            for (var t = 1; t <= 4; t++) tierLabel.RemoveClass('rs-tier' + t);
-            tierLabel.AddClass('rs-tier' + state.itemTier);
-        }
-    }
-
-    // Cycle all three lists to force DOM population.
-    // Suppression keeps gShowingRandom alive during our own dispatches.
-    function loadAllItemsThenRoll(tierNum, onReady) {
-        var root = $.GetContextPanel();
-        _suppressDeactivation = true;
-        $.DispatchEvent('CitadelShopModsActivate', 'EItemSlotType_WeaponMod');
-        $.Schedule(0.06, function () {
-            $.DispatchEvent('CitadelShopModsActivate', 'EItemSlotType_Armor');
-            $.Schedule(0.06, function () {
-                $.DispatchEvent('CitadelShopModsActivate', 'EItemSlotType_Tech');
-                $.Schedule(0.10, function () {
-                    root.AddClass('gShowingRandom');
-                    snapshotShowingClasses(root);
-                    $.Schedule(0.15, function () { _suppressDeactivation = false; });
-                    onReady(tierNum);
-                });
-            });
+    function acquired(card) { return card.BHasClass('owned') || card.BHasClass('usedAsComponent'); }
+    function identify(card, name) {
+        var image = card.FindChildTraverse('ModIconImage');
+        var src = image && (image.src || image.GetAttributeString('src', '')) || '';
+        var imageMatch = String(src).match(/[/]items[/]([a-z0-9_/]+?)(?:_psd[.]vtex(?:_c)?|[.]psd)$/i);
+        var nameMatches = [], iconMatches = [];
+        Object.keys(shopItems).forEach(function (token) {
+            if ($.Localize('#' + token) === name) nameMatches.push(token);
+            if (imageMatch && imageMatch[1] === shopItems[token][0]) iconMatches.push(token);
         });
+        var matches = nameMatches.length && iconMatches.length ?
+            nameMatches.filter(function (token) { return iconMatches.indexOf(token) !== -1; }) :
+            (nameMatches.length ? nameMatches : iconMatches);
+        var token = matches.length === 1 ? matches[0] : '';
+        var art = imageMatch ? imageMatch[1] : (token && shopItems[token][0]);
+        return { token: token, image: art ? 's2r://panorama/images/items/' + art + '_psd.vtex' : '' };
     }
+    function draw(tier, list) {
+        var cards = list.FindChildrenWithClassTraverse('mod_view');
+        var seen = Object.create(null);
+        var choices = [];
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.paneltype !== 'CitadelShopMod' || !card.BHasClass('ModTier' + tier)) continue;
+            var category = getCategory(card);
+            if (!enabled[category] || acquired(card) || card.BHasClass('itemDisabled') || card.BHasClass('disabledFromPurchasing')) continue;
+            var name = itemName(card);
+            var key = category + '|' + name;
+            if (!name || seen[key]) continue;
+            seen[key] = true;
+            choices.push({ card: card, name: name, category: category });
+        }
+        var picked, identity;
+        do {
+            if (!choices.length) return false;
+            picked = choices.splice(Math.floor(Math.random() * choices.length), 1)[0];
+            identity = identify(picked.card, picked.name);
+        } while (!identity.token);
+        var serial = hud.GetAttributeInt('rs_roll_serial', 0) + 1;
+        hud.SetAttributeInt('rs_roll_serial', serial);
+        hud.SetAttributeString('rs_buy_status', 'pending');
+        current = { name: picked.name, category: picked.category, tier: tier, token: identity.token,
+            image: identity.image, slotClass: shopItems[identity.token][1], cost: amount(picked.card, 'ItemCost'), serial: serial };
+        // Several upgrades share their equipment icon class. Require the exact catalog
+        // card's owned state as a second signal for these items.
+        current.activeItem = picked.card.BHasClass('isActiveItem');
+        current.recentBefore = ChaosShopRecentCount(root, current.name);
+        current.sharedSlotClass = !!shopItems[identity.token][2];
+        current.beforeCount = ChaosShopCountEquipped(hud, current);
 
-    function findItemShopModPanel() {
-        var root = $.GetContextPanel();
-        var list = root.FindChildTraverse(state.itemListId);
-        if (!list || !list.IsValid()) return null;
-        var panels = list.FindChildrenWithClassTraverse(state.itemClass);
-        for (var i = 0; i < panels.length; i++) {
-            var icon = panels[i];
-            if (!icon || !icon.IsValid()) continue;
-            if (getTierFromPanel(icon, list) !== state.itemTier) continue;
-            var p = icon;
-            while (p && p.IsValid()) { if (p.paneltype === 'CitadelShopMod') return p; p = p.GetParent(); }
+        targetCards = [picked.card];
+        refreshCardsAt = 0;
+        persist();
+        renderItem();
+        return true;
+    }
+    function renderItem() {
+        var wrapper = panel('RSBigIconWrapper');
+        var image = panel('RSIconImage');
+        image.visible = !!current.image;
+        if (current.image) image.SetImage(current.image);
+        wrapper.SetHasClass('rs-has-art', !!current.image);
+        label('RSFallbackTier', numerals[current.tier]);
+        label('RSItemName', current.name);
+        label('RSItemTier', categoryLabels[current.category] + '  ·  ' + (ru ? 'Уровень ' : 'Tier ') + numerals[current.tier]);
+    }
+    function findTarget(container) {
+        var cards = container ? container.FindChildrenWithClassTraverse('mod_view') : [];
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.paneltype === 'CitadelShopMod' && card.BHasClass('ModTier' + current.tier)
+                && card.BHasClass(categoryClasses[current.category]) && itemName(card) === current.name) return card;
         }
         return null;
     }
-
-    var LIST_TO_EVENT = {
-        'ShopModsListWeapon': 'EItemSlotType_WeaponMod',
-        'ShopModsListArmor':  'EItemSlotType_Armor',
-        'ShopModsListTech':   'EItemSlotType_Tech'
+    function matchingCards() {
+        var now = Date.now();
+        // The catalog can rebuild or recycle a panel when the player changes tabs.
+        targetCards = targetCards.filter(function (card) {
+            return card.IsValid() && card.BHasClass('ModTier' + current.tier)
+                && card.BHasClass(categoryClasses[current.category]) && itemName(card) === current.name;
+        });
+        if (now >= refreshCardsAt) {
+            targetCards = ['ShopModsFiltered', 'ShopModsSelectedBuild', 'ShopModsRecommended']
+                .map(function (id) { return findTarget(panel(id)); })
+                .filter(function (card) { return !!card; });
+            refreshCardsAt = now + 700;
+        }
+        return targetCards;
+    }
+    function spendableSouls() {
+        var wallet = hud.FindChildTraverse('gold_and_ap_container');
+        var balance = amount(wallet && wallet.FindChildTraverse('CurrentGoldAmount'), 'hudCurGoldLabel');
+        return balance != null ? balance : amount(panel('CurrentGoldAmount'), 'hudCurGoldLabel');
+    }
+    function stopHighlight() {
+        if (highlighted && highlighted.IsValid()) highlighted.RemoveClass('rs-native-target');
+        highlighted = null;
+    }
+    function markTarget(card) {
+        if (highlighted === card) return;
+        stopHighlight();
+        if (!card) return;
+        highlighted = card;
+        card.AddClass('rs-native-target');
+        if (typeof card.ScrollParentToMakePanelFit === 'function') card.ScrollParentToMakePanelFit(1, false);
+    }
+    function purchaseStatus(message) { label('RSPurchaseStatus', message); }
+    function monitor(menuOpen) {
+        var cards = matchingCards();
+        var card = cards[0];
+        if (followTarget && menuOpen) markTarget(card);
+        if (hud.GetAttributeInt('rs_equipped_serial', -1) === current.serial) {
+            label('RSResult', (ru ? 'Куплено: ' : 'Purchased: ') + current.name);
+            current = null;
+            persist();
+            stopHighlight();
+            followTarget = false;
+            return;
+        }
+        if (!menuOpen) return;
+        var souls = spendableSouls();
+        var reportedCost = card && amount(card, 'ItemCost');
+        if (reportedCost != null && reportedCost !== current.cost) { current.cost = reportedCost; persist(); }
+        var cost = current.cost;
+        label('RSPrice', cost == null ? '' : (ru ? 'Цена · ' : 'Price · ') + cost);
+        var status = hud.GetAttributeString('rs_buy_status', 'pending');
+        var fraction = cost > 0 && souls != null ? Math.min(100, 100 * souls / cost) : 0;
+        panel('RSProgress').style.width = fraction + '%';
+        if (status === 'funds' && cost != null && souls != null) {
+            purchaseStatus((ru ? 'Не хватает душ: ' : 'Souls needed: ') + Math.max(0, cost - souls));
+        } else if (status === 'zone') {
+            purchaseStatus(ru ? 'Вернись в зону магазина.' : 'Return to shop range.');
+        } else if (status === 'blocked') {
+            purchaseStatus(ru ? 'Покупка сейчас недоступна.' : 'Purchasing is currently unavailable.');
+        } else if (status === 'sent') {
+            purchaseStatus(ru ? 'Покупка отправлена.' : 'Purchase requested.');
+        } else if (status === 'unconfirmed') {
+            purchaseStatus(ru ? 'Предмет пока не появился в инвентаре.' : 'Waiting for the item to appear in inventory.');
+        } else if (status === 'card') {
+            purchaseStatus(ru ? 'Ожидание карточки предмета.' : 'Waiting for the shop item card.');
+        } else if (status === 'error') {
+            purchaseStatus(ru ? 'Быстрая покупка недоступна. Открой карточку предмета.' : 'Quickbuy unavailable. Open the item card.');
+        } else {
+            purchaseStatus(ru ? 'Ожидание автопокупки.' : 'Waiting to buy.');
+        }
+    }
+    function updatePrices(list) {
+        var rows = list ? list.FindChildrenWithClassTraverse('tierRow') : [];
+        for (var i = 0; i < rows.length; i++) {
+            var sticker = rows[i].FindChildrenWithClassTraverse('CostLabel')[0];
+            var price = sticker && sticker.GetChildCount() > 1 ? parseAmount(sticker.GetChild(1).text) : null;
+            if (price == null) continue;
+            for (var t = 1; t <= 4; t++) if (rows[i].BHasClass('EModTier_' + t)) label('RSCost' + t, String(price));
+        }
+    }
+    function schedule(delay) {
+        if (scheduled) return;
+        scheduled = true;
+        $.Schedule(delay, tick);
+    }
+    function tick() {
+        scheduled = false;
+        if (!root.IsValid() || !hud.IsValid() || hud.GetAttributeInt('rs_shop_instance', 0) !== instance) return;
+        var active = root.BHasClass('gShowingRandom');
+        var open = root.BHasClass('gShopOpen');
+        if (open && active && tabClass && !root.BHasClass(tabClass) && Date.now() >= tabGraceUntil) {
+            leaveRandom();
+            active = false;
+        }
+        if (current) monitor(open);
+        if (open && active && !current) {
+            var list = panel('ShopModsFiltered');
+            updatePrices(list);
+            if (rollTier) {
+                if (list && root.BHasClass(tabClass) && draw(rollTier, list)) {
+                    rollTier = 0;
+                    monitor(true);
+                } else if (++loadTries >= 8) {
+                    rollTier = 0;
+                    label('RSResult', ru ? 'Нет доступных предметов. Проверь выбранные категории и фильтры магазина.' :
+                        'No eligible items. Check your categories and shop filters.');
+                }
+            }
+        }
+        if (!open) rollTier = 0;
+        if (active || current) schedule(open ? 0.35 : 1);
+    }
+    function leaveRandom() {
+        root.RemoveClass('gShowingRandom');
+        rollTier = 0;
+        followTarget = false;
+        stopHighlight();
+    }
+    function selectCatalog(category) {
+        var tabs = ['Weapon', 'Vitality', 'Spirit'];
+        var classes = ['showingWeapon', 'showingArmor', 'showingTech'];
+        tabClass = category == null ? 'showingAllItems' : classes[category];
+        tabGraceUntil = Date.now() + 1000;
+        $.DispatchEvent('CitadelSelectShopTab', 'EShopTab_' + (category == null ? 'AllItems' : tabs[category]));
+    }
+    root.ActivateRandomTab = function () {
+        stopHighlight();
+        followTarget = false;
+        root.AddClass('gShowingRandom');
+        selectCatalog(current ? current.category : null);
+        if (current) renderItem();
+        schedule(0.1);
+    };
+    root.RandomShopSelectTab = function (tab, sound) {
+        leaveRandom();
+        $.DispatchEvent('CitadelSelectShopTab', tab);
+        $.DispatchEvent('PlaySoundEffect', sound);
+    };
+    root.RandomShopToggleCategory = function (category) {
+        var i = categories.indexOf(category);
+        if (current || rollTier || i < 0 || (enabled[i] && enabled.filter(Boolean).length === 1)) return;
+        enabled[i] = !enabled[i];
+        panel('RSFilter' + category).SetHasClass('rs-on', enabled[i]);
+        label('RSResult', '');
+    };
+    root.RandomShopRollTier = function (tier) {
+        if (current || rollTier || !numerals[tier] || !root.BHasClass('gShowingRandom')) return;
+        rollTier = tier;
+        loadTries = 0;
+        if (tabClass !== 'showingAllItems') selectCatalog(null);
+        label('RSResult', ru ? 'Выбираем предмет…' : 'Drawing an item…');
+        schedule(0.1);
+    };
+    root.RandomShopShowItem = function () {
+        if (!current) return;
+        leaveRandom();
+        followTarget = true;
+        selectCatalog(current.category);
+        schedule(0.1);
     };
 
-    // Navigate to the item's native tab (so C++ registers the active list),
-    // keep gShowingRandom overlay active, update snapshot, then call cb().
-    function navigateToListThenCall(cb) {
-        var evtType = LIST_TO_EVENT[state.itemListId];
-        if (!evtType) { cb(); return; }
-        _suppressDeactivation = true;
-        $.DispatchEvent('CitadelShopModsActivate', evtType);
-        $.Schedule(0.12, function () {
-            var root = $.GetContextPanel();
-            root.AddClass('gShowingRandom');
-            snapshotShowingClasses(root);
-            $.Schedule(0.08, function () {
-                _suppressDeactivation = false;
-                cb();
-            });
-        });
-    }
-
-    function triggerPurchase() {
-        var shopMod = findItemShopModPanel();
-        if (shopMod && shopMod.IsValid()) {
-            $.Msg('[RandomShop] Triggering purchase id=' + (shopMod.id || '?') + ' type=' + shopMod.paneltype);
-            try { shopMod.SetFocus(); } catch (e) {}
-            try { shopMod.SetInputFocus(); } catch (e) {}
-            try { $.DispatchEvent('Activated',             shopMod, 'mouse'); } catch (e) {}
-            try { $.DispatchEvent('PanelActivated',        shopMod);          } catch (e) {}
-            try { $.DispatchEvent('MouseButtonActivate',   shopMod, 0);       } catch (e) {}
-            try { $.DispatchEvent('UIEvent.MouseActivate', shopMod);          } catch (e) {}
-        } else {
-            $.Msg('[RandomShop] triggerPurchase: panel not found for cls=' + state.itemClass + ' list=' + state.itemListId);
-        }
-        if (state.itemType) {
-            try { $.DispatchEvent('CitadelShopPurchaseMod', state.itemType); } catch (e) {}
-            try { $.DispatchEvent('CitadelPurchaseItem',    state.itemType); } catch (e) {}
-            try { $.DispatchEvent('CitadelModPurchase',     state.itemType); } catch (e) {}
-        }
-    }
-
-    async function monitorPurchase(targetClass, targetTier, targetListId) {
-        var deadline = Date.now() + 30000; var purchased = false;
-        await _Async.Condition(function () {
-            if (Date.now() > deadline) { $.Msg('[RandomShop] timeout 30s'); return true; }
-            var root = $.GetContextPanel();
-            var list = root.FindChildTraverse(targetListId);
-            if (!list || !list.IsValid()) return false;
-            var panels = list.FindChildrenWithClassTraverse(targetClass);
-            for (var i = 0; i < panels.length; i++) {
-                var p = panels[i];
-                if (!p || !p.IsValid()) continue;
-                if (getTierFromPanel(p, list) !== targetTier) continue;
-                if (p.BHasClass('owned')) { purchased = true; return true; }
-            }
-            return false;
-        });
-        onItemPurchased(purchased);
-    }
-
-    function onItemPurchased(wasPurchased) {
-        $.Msg('[RandomShop] ' + (wasPurchased ? 'Purchase confirmed' : 'Timeout'));
-        state.itemClass = ''; state.itemTier = 0; state.itemListId = ''; state.itemType = 0;
-        setMode('idle');
-        var root = $.GetContextPanel();
-        var msg = root.FindChildTraverse('RSNoItemsMsg');    if (msg) msg.text = '';
-        var sts = root.FindChildTraverse('RSPurchaseStatus'); if (sts) sts.text = '';
-        scheduleAffordabilityUpdate();
-        updateItemAvailability();
-    }
-
-    function updateAffordability() {
-        var souls = getSouls(); var root = $.GetContextPanel();
-        for (var t = 1; t <= 4; t++) {
-            var btn = root.FindChildTraverse('RSTier' + t);
-            if (!btn || !btn.IsValid()) continue;
-            btn.SetHasClass('rs-cant-afford', (souls >= 0) && (souls < (TIER_COSTS[t] || 0)));
-        }
-    }
-
-    function updateItemAvailability() {
-        var root = $.GetContextPanel();
-        for (var t = 1; t <= 4; t++) {
-            var btn = root.FindChildTraverse('RSTier' + t);
-            if (!btn || !btn.IsValid()) continue;
-            btn.SetHasClass('rs-no-items', collectItemsForTier(t).length === 0);
-        }
-    }
-
-    function scheduleAffordabilityUpdate() {
-        updateAffordability();
-        $.Schedule(2.0, function () { if (state.mode === 'idle') scheduleAffordabilityUpdate(); });
-    }
-
-    function areSlotsFullForItems(items) {
-        for (var i = 0; i < Math.min(items.length, 5); i++) {
-            var icon = items[i].icon;
-            if (!icon || !icon.IsValid()) continue;
-            var p = icon;
-            for (var d = 0; d < 12; d++) {
-                if (!p || !p.IsValid()) break;
-                if (p.paneltype === 'CitadelShopMod') {
-                    if (p.BHasClass('disabledFromPurchasing')) { $.Msg('[RandomShop] slots full'); return true; }
-                    break;
-                }
-                p = p.GetParent();
-            }
-        }
-        return false;
-    }
-
-    function doAutoPurchase(tierNum) {
-        var root = $.GetContextPanel();
-        var msg  = root.FindChildTraverse('RSNoItemsMsg');
-        var cost = TIER_COSTS[tierNum] || 0;
-        var souls = getSouls();
-        if (souls >= 0 && souls < cost) { if (msg) msg.text = 'Need ' + cost + ' souls (have ' + souls + ')'; return; }
-        var items = collectItemsForTier(tierNum);
-        if (items.length === 0) { if (msg) msg.text = 'All ' + getEnabledCatString() + ' Tier ' + tierNum + ' items owned!'; return; }
-        if (areSlotsFullForItems(items)) { if (msg) msg.text = 'All slots full - sell an item first!'; return; }
-        if (msg) msg.text = '';
-        var picked = items[Math.floor(Math.random() * items.length)];
-        state.itemClass = picked.cls; state.itemTier = tierNum;
-        state.itemListId = picked.listId; state.itemType = picked.type;
-        $.Msg('[RandomShop] Rolled: cls=' + picked.cls + ' tier=' + tierNum);
-        setMode('rolled');
-        updateRolledDisplay();
-        // gShowingRandom stays active — do NOT dispatch CitadelShopModsActivate here
-        // (it would set showingX and trigger the native-tab watcher).
-        // Panels are in DOM; triggerPurchase dispatches events directly to them.
-
-        function pollForPurchaseCondition() {
-            if (state.mode !== 'rolled') return;
-            var r  = $.GetContextPanel();
-            var s  = getSouls();
-            var c  = TIER_COSTS[state.itemTier] || 0;
-            var sl = r.FindChildTraverse('RSPurchaseStatus');
-            if ((s < 0) || (s >= c)) {
-                if (sl) sl.text = 'Purchasing...';
-                navigateToListThenCall(triggerPurchase);
-                $.Schedule(1.5, pollForPurchaseCondition);
-            } else {
-                if (sl) sl.text = 'Waiting for souls... (' + s + '/' + c + ')';
-                $.Schedule(0.5, pollForPurchaseCondition);
-            }
-        }
-        $.Schedule(0.25, pollForPurchaseCondition);
-        monitorPurchase(picked.cls, tierNum, picked.listId);
-    }
-
-    function RandomShopRollTier(tierNum) {
-        if (state.mode !== 'idle') return;
-        loadAllItemsThenRoll(tierNum, doAutoPurchase);
-    }
-
-    function RandomShopToggleCategory(listId) {
-        if (state.mode !== 'idle') return;
-        var enabledCount = 0;
-        for (var i = 0; i < LIST_IDS.length; i++) { if (_enabledLists[LIST_IDS[i]]) enabledCount++; }
-        if (_enabledLists[listId] && enabledCount <= 1) return;
-        _enabledLists[listId] = !_enabledLists[listId];
-        var root = $.GetContextPanel();
-        var btn = root.FindChildTraverse(LIST_FILTER_IDS[listId]);
-        if (btn && btn.IsValid()) {
-            btn.SetHasClass('rs-filter-on',  _enabledLists[listId]);
-            btn.SetHasClass('rs-filter-off', !_enabledLists[listId]);
-        }
-        $.Msg('[RandomShop] Toggle ' + listId + ' -> ' + _enabledLists[listId]);
-        updateItemAvailability();
-    }
-
-    var ctx = $.GetContextPanel();
-    ctx.RandomShopRollTier       = RandomShopRollTier;
-    ctx.RandomShopBuyItem        = function () {};
-    ctx.ActivateRandomTab        = ActivateRandomTab;
-    ctx.DeactivateRandomTab      = DeactivateRandomTab;
-    ctx.RandomShopToggleCategory = RandomShopToggleCategory;
-
-    function cancelSlotsFullRoll(root) {
-        $.Msg('[RandomShop] Slots full - canceling roll');
-        var buildPanel = root.FindChildTraverse('ShopModsSelectedBuild');
-        if (buildPanel && buildPanel.IsValid()) {
-            try { $.DispatchEvent('Cancelled',      buildPanel); } catch (e) {}
-            try { $.DispatchEvent('PopupDismissed', buildPanel); } catch (e) {}
-        }
-        state.itemClass = ''; state.itemTier = 0; state.itemListId = ''; state.itemType = 0;
-        setMode('idle');
-        var msg = root.FindChildTraverse('RSNoItemsMsg');     if (msg) msg.text = 'All slots full - sell an item first!';
-        var sts = root.FindChildTraverse('RSPurchaseStatus'); if (sts) sts.text = '';
-        scheduleAffordabilityUpdate();
-    }
-
-    function watchReplacementDialog() {
-        var root = $.GetContextPanel();
-        if (root.BHasClass('gEditingBuilds') && state.mode === 'rolled') cancelSlotsFullRoll(root);
-        $.Schedule(state.mode === 'rolled' ? 0 : 0.1, watchReplacementDialog);
-    }
-
-    $.Msg('[RandomShop] loaded');
-    scheduleAffordabilityUpdate();
-    watchReplacementDialog();
-    watchNativeTabActivation();
-
+    for (var i = 0; i < categories.length; i++) label('RSLabel' + categories[i], categoryLabels[i]);
+    label('RSHint', ru ? 'Выбери категории и уровень. Выпавший предмет закрепится до покупки.' :
+        'Choose categories and a tier. Your roll stays pinned until purchased.');
+    label('RSPinnedLabel', ru ? 'Закреплённый предмет' : 'Pinned item');
+    label('RSShowLabel', ru ? 'Показать предмет в магазине' : 'Show item in shop');
+    persist();
+    if (current) renderItem();
+    if (root.BHasClass('gShowingRandom')) root.ActivateRandomTab();
+    else if (current) schedule(0.1);
 })();
