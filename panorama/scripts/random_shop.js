@@ -223,11 +223,91 @@
     var requestedHand = null;
     var handRefreshAt = 0;
     var identityCache = Object.create(null);
+    var history = [];
+    var matchEpoch = hud.GetAttributeInt('rs_match_epoch', 0);
+    try {
+        var savedHistory = instance > 1 && JSON.parse(hud.GetAttributeString('rs_roll_history', '[]'));
+        if (Array.isArray(savedHistory)) history = savedHistory.slice(0, 20);
+    } catch (e) {}
+    var historyStatus = ru ?
+        {offered:'Выбор карты', pending:'Ждёт покупки', bought:'Куплено', rerolled:'Переброшено', skipped:'Пропущено'} :
+        {offered:'Choose a card', pending:'Awaiting purchase', bought:'Purchased', rerolled:'Rerolled', skipped:'Skipped'};
 
     function panel(id) { return root.FindChildTraverse(id); }
     function label(id, text) {
         var p = panel(id);
         if (p && p.text !== text) p.text = text;
+    }
+    function renderHistory() {
+        var open = root.BHasClass('rs-history-open');
+        label('RSHistoryButtonLabel', open ? (ru ? 'Назад' : 'Back') : (ru ? 'История' : 'History'));
+        if (!open) return;
+        panel('RSHistoryEmpty').visible = history.length === 0;
+        var list = panel('RSHistoryList');
+        if (list.GetChildCount() > history.length) list.RemoveAndDeleteChildren();
+        history.forEach(function (entry, i) {
+            var row = list.GetChild(i);
+            if (!row) {
+                row = $.CreatePanel('Panel', list, '');
+                row.AddClass('RSHistoryRow');
+                $.CreatePanel('Label', row, '').AddClass('RSHistoryMeta');
+                $.CreatePanel('Label', row, '').AddClass('RSHistoryItems');
+            }
+            var modeLabel = entry.mode === 'blind' ? 'RSBlindLabel' : entry.mode === 'draft' ? 'RSDraftLabel' : 'RSClassicLabel';
+            var meta = panel(modeLabel).text + '  ·  ' + numerals[entry.tier] + '  ·  ' + historyStatus[entry.status];
+            if (entry.mode === 'draft' && entry.name) meta += ' · ' + entry.name;
+            row.GetChild(0).text = meta;
+            row.GetChild(1).text = entry.offers ? entry.offers.join('  /  ') : (entry.name || '?');
+        });
+    }
+    root.RandomShopHistory = function () {
+        syncMatch();
+        root.SetHasClass('rs-history-open', !root.BHasClass('rs-history-open'));
+        renderHistory();
+    };
+    function saveHistory() {
+        hud.SetAttributeString('rs_roll_history', JSON.stringify(history));
+        renderHistory();
+    }
+    function addHistory(kind, tier, name, offers) {
+        var id = history.length ? history[0].id + 1 : 1;
+        history.unshift({id:id, mode:kind, tier:tier, name:name, offers:offers, status:offers ? 'offered' : 'pending'});
+        if (history.length > 20) history.pop();
+        saveHistory();
+        return id;
+    }
+    function updateHistory(id, status, name) {
+        var entry = history[0]; // Only the latest roll can still be pending.
+        if (!entry || entry.id !== id) return;
+        entry.status = status;
+        if (name) entry.name = name;
+        saveHistory();
+    }
+    function recordHand(catalog) {
+        var names = hand.tokens.map(function (token) {
+            return catalog[token] ? catalog[token].name : $.Localize('#' + token);
+        });
+        hand.historyId = addHistory('draft', hand.tier, '', names);
+    }
+    function syncMatch() {
+        var epoch = hud.GetAttributeInt('rs_match_epoch', 0);
+        if (matchEpoch === epoch) return;
+        matchEpoch = epoch;
+        history = [];
+        current = null;
+        hand = null;
+        reveal = null;
+        rollTier = 0;
+        requestedHand = null;
+        targetCards = [];
+        followTarget = false;
+        stopHighlight();
+        root.RemoveClass('rs-pending');
+        root.RemoveClass('rs-hand');
+        panel('RSHistoryList').RemoveAndDeleteChildren();
+        label('RSResult', '');
+        renderReveal();
+        renderHistory();
     }
     function persist() {
         hud.SetAttributeString('rs_reserved_item', JSON.stringify(current));
@@ -315,6 +395,12 @@
         current.recentBefore = ChaosShopRecentCount(root, current.name);
         current.sharedSlotClass = !!shopItems[identity.token][2];
         current.beforeCount = ChaosShopCountEquipped(hud, current);
+        if (hand) {
+            current.historyId = hand.historyId;
+            updateHistory(current.historyId, 'pending', current.name);
+        } else {
+            current.historyId = addHistory(mode, tier, current.blind ? '' : current.name);
+        }
 
         targetCards = [picked.card];
         refreshCardsAt = 0;
@@ -357,6 +443,7 @@
         }
         if (!h.tokens.length) return false;
         hand = h;
+        recordHand(catalog);
         if (h.seed) hud.SetAttributeInt('rs_draft_next', h.round % 99999 + 1);
         requestedHand = null;
         persistHand();
@@ -403,6 +490,7 @@
         return list && root.BHasClass('showingAllItems') ? draftCatalog(hand.tier, list) : {};
     }
     function canActOnHand() {
+        syncMatch();
         return hand && !current && root.BHasClass('gShopOpen') && root.BHasClass('gShowingRandom');
     }
     root.RandomShopPick = function (index) {
@@ -420,8 +508,10 @@
         var catalog = currentCatalog();
         var pool = Object.keys(catalog).filter(function (token) { return eligible(catalog[token].card); });
         if (!hand.seed && !pool.length) { renderHand(catalog); return; }
+        updateHistory(hand.historyId, 'rerolled');
         hand.rerolled = true;
         hand.tokens = hand.seed ? ChaosDraftSharedHand(hand) : ChaosDraftDeal(pool, hand.tokens, Math.random);
+        recordHand(catalog);
         persistHand();
         renderHand(catalog);
     };
@@ -429,6 +519,7 @@
         if (!canActOnHand()) return;
         var catalog = currentCatalog();
         if (hand.tokens.some(function (t) { return catalog[t] && eligible(catalog[t].card); })) return;
+        updateHistory(hand.historyId, 'skipped');
         hand = null;
         persistHand();
     };
@@ -509,6 +600,7 @@
         var card = cards[0];
         if (followTarget && menuOpen) markTarget(card);
         if (hud.GetAttributeInt('rs_equipped_serial', -1) === current.serial) {
+            updateHistory(current.historyId, 'bought', current.name);
             if (current.blind) setReveal(current);
             label('RSResult', current.blind ? '' : (ru ? 'Куплено: ' : 'Purchased: ') + current.name);
             current = null;
@@ -568,6 +660,7 @@
     function tick() {
         scheduled = false;
         if (!root.IsValid() || !hud.IsValid() || hud.GetAttributeInt('rs_shop_instance', 0) !== instance) return;
+        syncMatch();
         var active = root.BHasClass('gShowingRandom');
         var open = root.BHasClass('gShopOpen');
         if (open && active && tabClass && !root.BHasClass(tabClass) && Date.now() >= tabGraceUntil) {
@@ -609,6 +702,7 @@
         $.DispatchEvent('CitadelSelectShopTab', 'EShopTab_' + (category == null ? 'AllItems' : tabs[category]));
     }
     root.ActivateRandomTab = function () {
+        syncMatch();
         stopHighlight();
         followTarget = false;
         root.AddClass('gShowingRandom');
@@ -623,12 +717,14 @@
         $.DispatchEvent('PlaySoundEffect', sound);
     };
     root.RandomShopToggleCategory = function (category) {
+        syncMatch();
         var i = categories.indexOf(category);
         if (current || hand || rollTier || i < 0 || (enabled[i] && enabled.filter(Boolean).length === 1)) return;
         setMask(mask ^ (1 << i));
         label('RSResult', '');
     };
     root.RandomShopMode = function (next) {
+        syncMatch();
         if (current || hand || rollTier) return;
         if (next === true) next = 'draft';
         if (next === false) next = 'classic';
@@ -663,6 +759,7 @@
         panel('RSSeed').text = seed;
     }
     root.RandomShopJoin = function () {
+        syncMatch();
         if (current || hand || rollTier || mode !== 'draft') return;
         var code = readCode();
         if (!code) return;
@@ -672,6 +769,7 @@
             (ru ? 'Одиночный драфт. Выбери уровень.' : 'Solo draft. Choose a tier.'));
     };
     root.RandomShopRollTier = function (tier) {
+        syncMatch();
         if (current || hand || rollTier || !numerals[tier] || !root.BHasClass('gShowingRandom')) return;
         if (mode === 'draft') {
             var code = readCode();
@@ -689,6 +787,7 @@
         schedule(0.1);
     };
     root.RandomShopShowItem = function () {
+        syncMatch();
         if (!current || current.blind) return;
         leaveRandom();
         followTarget = true;
@@ -700,6 +799,8 @@
     label('RSClassicLabel', ru ? 'Один предмет' : 'Single roll');
     label('RSDraftLabel', ru ? 'Выбор из трёх' : 'Pick one of three');
     label('RSBlindLabel', ru ? 'Вслепую' : 'Blind');
+    label('RSHistoryTitle', ru ? 'Последние роллы матча' : 'Recent rolls this match');
+    label('RSHistoryEmpty', ru ? 'Здесь появится твой первый ролл.' : 'Your first roll will appear here.');
     label('RSRevealLabel', ru ? 'Куплено вслепую' : 'Blind purchase');
     renderReveal();
     label('RSSeedLabel', ru ? 'Код для друзей (по желанию)' : 'Shared code (optional)');
@@ -710,6 +811,9 @@
     setMask(mask);
     paintMode();
     if (current) hand = null;
+    if (current && !current.historyId) current.historyId = addHistory(current.blind ? 'blind' : 'classic', current.tier, current.blind ? '' : current.name);
+    if (hand && !hand.historyId) recordHand(currentCatalog());
+    renderHistory();
     persistHand();
     label('RSPinnedLabel', ru ? 'Закреплённый предмет' : 'Pinned item');
     label('RSShowLabel', ru ? 'Показать предмет в магазине' : 'Show item in shop');

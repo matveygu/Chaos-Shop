@@ -21,13 +21,14 @@ class Panel {
   RemoveClass(c){this.classes.delete(c);}
   SetHasClass(c,v){v?this.AddClass(c):this.RemoveClass(c);}
   GetAttributeInt(k,d){return this.attrs[k]??d;}
-  GetAttributeString(k,d){return this.attrs[k]??d;}
+  GetAttributeString(k,d){if(k==='rs_roll_history') historyReads++;return this.attrs[k]??d;}
   SetAttributeInt(k,v){this.attrs[k]=v;}
   SetAttributeString(k,v){this.attrs[k]=v;}
   FindChildTraverse(id){return this.children.find(c=>c.id===id) || this.children.map(c=>c.FindChildTraverse(id)).find(Boolean);}
   FindChildrenWithClassTraverse(c){return this.children.flatMap(p=>[...(p.BHasClass(c)?[p]:[]),...p.FindChildrenWithClassTraverse(c)]);}
   GetChildCount(){return this.children.length;}
   GetChild(i){return this.children[i];}
+  RemoveAndDeleteChildren(){this.children=[];}
   SetImage(src){this.src=src;}
   ScrollParentToMakePanelFit(){this.scrolled=true;}
 }
@@ -46,8 +47,10 @@ new Panel('ItemCost','Label',card).text='800';
 new Panel('ModIconImage','Image',card).src='s2r://panorama/images/items/weapon/close_quarters_psd.vtex';
 const tabs={EShopTab_Weapon:'showingWeapon',EShopTab_Vitality:'showingArmor',EShopTab_Spirit:'showingTech',EShopTab_AllItems:'showingAllItems',EShopTab_Build:'showingFavorites'};
 let now=0, timers=[], requests=[], logs=[], reject=false;
+let historyReads=0;
 function run(source, context) {
   const $={
+    CreatePanel:(type,parent,id)=>new Panel(id,type,parent),
     GetContextPanel:()=>context, Language:()=>'russian', Msg:m=>logs.push(m),
     Localize:key=>key==='#upgrade_close_range'?'Close Quarters':key,
     Schedule:(seconds,fn)=>timers.push({at:now+seconds*1000,fn,context}),
@@ -79,6 +82,7 @@ function advance(ms) {
   now=end;
 }
 function pending(){return JSON.parse(hud.GetAttributeString('rs_reserved_item','null'));}
+function history(){return JSON.parse(hud.GetAttributeString('rs_roll_history','[]'));}
 function roll() {
   shop.AddClass('gShopOpen');
   shop.ActivateRandomTab();
@@ -102,6 +106,11 @@ function confirmed() {
 gold.text='200';
 run(shopScript,shop);
 run(workerScript,quick);
+assert.equal(historyReads,0,'fresh HUD does not load earlier rolls on startup');
+shop.RandomShopHistory();
+assert.equal(shop.FindChildTraverse('RSHistoryEmpty').visible,true);
+assert.equal(history().length,0);
+shop.RandomShopHistory();
 roll();
 quick.AddClass('InShopZone');
 advance(800);
@@ -218,6 +227,10 @@ assert.equal(pending(), null);
 card.RemoveClass('owned');
 shop.RandomShopPick(0);
 const pickedSerial = pending().serial;
+const pickedEntry = history()[0];
+assert.equal(pickedEntry.mode,'draft');
+assert.equal(pickedEntry.status,'pending');
+assert.equal(pickedEntry.name,'Golden Goose Egg');
 shop.RandomShopPick(0);
 shop.RandomShopMode(false);
 assert.equal(hud.attrs.rs_roll_serial, pickedSerial);
@@ -231,6 +244,8 @@ assert.equal(requests[4].open, false);
 equip('techPower','isTech').AddClass('isActiveItem');
 advance(600);
 confirmed();
+assert.equal(history()[0].id,pickedEntry.id);
+assert.equal(history()[0].status,'bought');
 quick.RemoveClass('InShopZone');
 
 // Find a test seed for which the first deal contains the fixture's single native card.
@@ -246,6 +261,8 @@ codeField.text = code;
 shop.RandomShopJoin();
 advance(900);
 const original = hand();
+assert.equal(history()[0].id, original.historyId);
+assert.equal(history()[0].offers.length,3);
 assert.deepEqual(original.tokens, Array.from(engine.ChaosDraftSharedHand(spec)));
 const egg = original.tokens.indexOf('upgrade_goose_egg');
 assert.equal(view('RSDraftCard'+egg).enabled, true);
@@ -260,6 +277,9 @@ assert.equal(pending(), null);
 shop.RandomShopReroll();
 advance(200);
 const after = hand();
+assert.equal(history()[1].id,original.historyId);
+assert.equal(history()[1].status,'rerolled');
+assert.equal(history()[0].id,after.historyId);
 assert.equal(after.rerolled, true);
 assert(after.tokens.every(t => !original.tokens.includes(t)));
 assert.equal(view('RSReroll').enabled, false);
@@ -268,10 +288,12 @@ advance(500);
 assert.deepEqual(hand(), after);
 shop.RandomShopSkip();
 assert.equal(hand(), null);
+assert.equal(history()[0].status,'skipped');
 codeField.text = code+'R';
 shop.RandomShopJoin();
 advance(900);
-assert.deepEqual(hand(), after);
+assert.ok(hand().historyId > after.historyId);
+assert.deepEqual(hand(), {...after,historyId:history()[0].id});
 shop.RandomShopSkip();
 codeField.text = spec.seed;
 shop.RandomShopRollTier(2);
@@ -293,6 +315,10 @@ const blindLogs = logs.length;
 shop.RandomShopRollTier(1);
 advance(800);
 const mystery = pending();
+const previousCount = history().length;
+shop.RandomShopHistory();
+assert.equal(history()[0].name,'');
+assert.equal(view('RSHistoryList').GetChild(0).GetChild(1).text,'?');
 assert.equal(mystery.blind,true);
 assert.equal(mystery.token,'upgrade_goose_egg');
 function stillHidden() {
@@ -330,6 +356,10 @@ closeShop();
 equip('techPower','isTech').AddClass('isActiveItem');
 advance(500);
 confirmed();
+assert.equal(history().length,previousCount);
+assert.equal(history()[0].status,'bought');
+assert.equal(view('RSHistoryList').GetChild(0).GetChild(1).text,mystery.name);
+shop.RandomShopHistory();
 assert.equal(view('RSBlindReveal').visible,true);
 assert.equal(view('RSRevealName').text,mystery.name);
 assert.equal(view('RSRevealIcon').src,mystery.image);
@@ -347,3 +377,60 @@ assert.equal(view('RSIconImage').visible,true);
 assert.equal(view('RSItemName').text,mystery.name);
 assert.equal(view('RSShowItem').visible,true);
 console.log('PASS: independent Blind roll, no item leaks before purchase, closed-shop auto-buy, inventory-only reveal with art, HUD reload and return to classic rolls.');
+
+// The always-active HUD observes a new match even if the shop is suspended.
+const matchBanner = new Panel('MatchStart','CitadelHudMatchStart',hud);
+shop.RandomShopHistory();
+assert.ok(view('RSHistoryList').GetChildCount()>0);
+closeShop();
+advance(3100);
+hud.AddClass('GameStatePreGameWait');
+advance(400);
+assert.equal(history().length,0);
+assert.equal(pending(),null);
+const epoch=hud.attrs.rs_match_epoch;
+run(workerScript,quick);
+hud.RemoveClass('GameStatePreGameWait');
+hud.AddClass('GameStatePreGame');
+advance(400);
+assert.equal(hud.attrs.rs_match_epoch,epoch);
+shop.AddClass('gShopOpen');
+shop.ActivateRandomTab();
+assert.equal(view('RSHistoryList').GetChildCount(),0);
+assert.equal(view('RSHistoryEmpty').visible,true);
+shop.RandomShopHistory();
+shop.RandomShopRollTier(1);
+advance(700);
+const newMatchRoll=pending();
+assert.equal(history().length,1);
+hud.RemoveClass('GameStatePreGame');
+matchBanner.AddClass('ShowMatchStart');
+advance(700);
+assert.equal(hud.attrs.rs_match_epoch,epoch);
+assert.equal(pending().serial,newMatchRoll.serial);
+matchBanner.RemoveClass('ShowMatchStart');
+run(shopScript,shop);
+advance(700);
+assert.equal(history().length,1);
+assert.equal(history()[0].id,newMatchRoll.historyId);
+// Repeated purchases and layout refreshes update rows in place. Only the last 20 survive.
+for(let i=0;i<21;i++) {
+  equip('techPower','isTech').AddClass('isActiveItem');
+  advance(700);
+  assert.equal(pending(),null);
+  shop.RandomShopRollTier(1);
+  advance(700);
+}
+assert.equal(history().length,20);
+assert.ok(history().every((e,i,a)=>!i || e.id<a[i-1].id));
+assert.equal(history().filter(e=>e.status==='pending').length,1);
+shop.RandomShopHistory();
+assert.equal(view('RSHistoryList').GetChildCount(),20);
+// Modes that skip the pregame HUD still signal the start of the next match.
+matchBanner.AddClass('ShowMatchStart');
+advance(700);
+assert.equal(history().length,0);
+assert.equal(view('RSHistoryList').GetChildCount(),0);
+assert.equal(view('RSHistoryEmpty').visible,true);
+assert.equal(pending(),null);
+console.log('PASS: match-local roll history, full draft offers, reroll and skip, hidden Blind entries, receipts, newest 20 rolls, HUD reload and next-match reset with closed shop.');

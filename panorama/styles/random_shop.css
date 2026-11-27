@@ -145,3 +145,15 @@
 .RSOfferPrice { color: #efcd86; font-size: 17px; }
 .RSHandActions { margin-top: 14px; }
 #RSHandCode { margin-left: 6px; color: #e2bbd1; }
+
+.RSShopHeader { width: 100%; flow-children: right; }
+.RSShopHeader .RSTitle { width: fill-parent-flow(1); }
+#RSHistoryButton { vertical-align: center; margin-right: 0; }
+#RSHistoryView { width: 100%; flow-children: down; visibility: collapse; }
+.rs-history-open #RSHistoryView { visibility: visible; }
+.rs-history-open #RSPicker, .rs-history-open #RSRolledView, .rs-history-open #RSDraftView { visibility: collapse; }
+#RSHistoryTitle { margin-bottom: 8px; }
+#RSHistoryList { width: 100%; max-height: 420px; flow-children: down; overflow: squish scroll; }
+.RSHistoryRow { width: 100%; flow-children: down; padding: 8px 12px; margin-bottom: 4px; background-color: #332d37; }
+.RSHistoryMeta { width: 100%; color: #d8b9a4; font-size: 16px; }
+.RSHistoryItems { width: 100%; color: #fff2dd; font-size: 20px; }

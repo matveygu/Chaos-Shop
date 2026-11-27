@@ -8,6 +8,40 @@
     hud.SetAttributeInt('rs_quickbuy_generation', generation);
     var cachedCard = null;
     var wallet = null;
+    var matchStart = hud.FindChildTraverse('MatchStart');
+    var nextPanelCheck = 0;
+    function inGameState(cls) {
+        return hud.BHasClass(cls) || (typeof hud.BAscendantHasClass === 'function' && hud.BAscendantHasClass(cls));
+    }
+
+    // This HUD keeps ticking when the shop is closed. Street Brawl rounds use
+    // different state from the match-level pregame and MatchStart banner.
+    function checkMatchStart() {
+        if ((!matchStart || !matchStart.IsValid()) && Date.now() >= nextPanelCheck) {
+            matchStart = hud.FindChildTraverse('MatchStart');
+            nextPanelCheck = Date.now() + 3000;
+        }
+        var pregame = inGameState('GameStatePreGameWait') || inGameState('GameStatePreGame');
+        var postgame = inGameState('GameStatePostGame');
+        var banner = !!(matchStart && matchStart.IsValid() && matchStart.BHasClass('ShowMatchStart'));
+        var flags = (pregame ? 1 : 0) | (banner ? 2 : 0) | (postgame ? 4 : 0);
+        var before = hud.GetAttributeInt('rs_match_flags', 0);
+        if (flags === before) return;
+        hud.SetAttributeInt('rs_match_flags', flags);
+        var enteringPregame = pregame && !(before & 1);
+        var enteringBanner = banner && !(before & 2);
+        var sawPregame = hud.GetAttributeInt('rs_saw_pregame', 0);
+        if (enteringPregame) hud.SetAttributeInt('rs_saw_pregame', 1);
+        if (enteringBanner || postgame) hud.SetAttributeInt('rs_saw_pregame', 0);
+        if (!enteringPregame && !(enteringBanner && !sawPregame)) return;
+        hud.SetAttributeInt('rs_match_epoch', hud.GetAttributeInt('rs_match_epoch', 0) + 1);
+        hud.SetAttributeString('rs_roll_history', '[]');
+        hud.SetAttributeString('rs_draft_hand', 'null');
+        hud.SetAttributeString('rs_reserved_item', 'null');
+        hud.SetAttributeString('rs_blind_reveal', 'null');
+        hud.SetAttributeInt('rs_draft_next', 1);
+        cachedCard = null;
+    }
 
     function status(value) {
         if (hud.GetAttributeString('rs_buy_status', '') !== value) hud.SetAttributeString('rs_buy_status', value);
@@ -109,6 +143,7 @@
     }
     function watch() {
         if (!quick.IsValid() || !hud.IsValid() || hud.GetAttributeInt('rs_quickbuy_generation', 0) !== generation) return;
+        checkMatchStart();
         var pending = hud.GetAttributeString('rs_reserved_item', 'null');
         if (pending !== 'null') {
             try {

@@ -69,7 +69,15 @@
 						<CitadelShopFilters id="ShopFilters" />
 						<Panel id="RandomShopContent">
 							<Panel class="RSSheet">
-								<Label class="RSTitle" text="Chaos Shop" />
+								<Panel class="RSShopHeader">
+									<Label class="RSTitle" text="Chaos Shop" />
+									<Button id="RSHistoryButton" class="RSMode" onactivate="$.GetContextPanel().RandomShopHistory();"><Label id="RSHistoryButtonLabel" /></Button>
+								</Panel>
+								<Panel id="RSHistoryView">
+									<Label id="RSHistoryTitle" class="RSHint" />
+									<Label id="RSHistoryEmpty" class="RSMessage" />
+									<Panel id="RSHistoryList" />
+								</Panel>
 								<Panel id="RSPicker">
 									<Panel id="RSBlindReveal" visible="false">
 										<Image id="RSRevealIcon" scaling="stretch-to-fit-preserve-aspect" />

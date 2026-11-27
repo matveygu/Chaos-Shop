@@ -14,6 +14,8 @@ Enable [random_shop.vpk](random_shop.vpk) with your Deadlock mod manager and res
 
 All three modes use Deadlock's normal shop rules. Once you have enough souls and can buy in a shop zone, Chaos Shop requests the purchase even with the shop closed.
 
+Open **? → History** anytime to see the latest 20 rolls in this match, newest first. Draft entries show the offered cards, rerolls, skips and your choice. A pending Blind entry shows **?** until the item reaches your inventory. The list lives in the current match HUD and resets for the next match.
+
 ## Earlier versions
 
 - [Six-player room build](https://github.com/matveygu/Chaos-Shop/tree/pre-blind-solo)
