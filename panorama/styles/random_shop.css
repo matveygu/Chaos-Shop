@@ -88,6 +88,9 @@
 .rs-has-art #RSFallbackTier { visibility: collapse; }
 .RSItemInfo { width: fill-parent-flow(1); flow-children: down; vertical-align: center; margin-left: 20px; }
 #RSItemName { color: #fff2dd; font-size: 32px; font-weight: bold; }
+#RSBlindReveal { flow-children: right; width: 100%; margin-bottom: 12px; padding: 8px 12px; background-color: #332d37; border-left: 3px solid #d5ab67; }
+#RSRevealIcon { width: 54px; height: 54px; vertical-align: center; }
+#RSRevealName { color: #fff2dd; font-size: 24px; font-weight: bold; }
 #RSPrice { color: #ebc977; font-size: 20px; }
 .RSProgressTrack { width: 100%; height: 6px; margin-top: 24px; background-color: #54454e; }
 #RSProgress { height: 100%; width: 0%; background-color: #d5ab67; }
@@ -142,16 +145,3 @@
 .RSOfferPrice { color: #efcd86; font-size: 17px; }
 .RSHandActions { margin-top: 14px; }
 #RSHandCode { margin-left: 6px; color: #e2bbd1; }
-
-#RSRoomBox { width: 100%; flow-children: down; visibility: collapse; }
-.rs-team #RSRoomBox { visibility: visible; }
-.rs-team #RSPicker, .rs-team #RSHandCode { visibility: collapse; }
-.rs-team.rs-team-ready #RSPicker { visibility: visible; }
-.rs-team #RSPicker .RSModeRow, .rs-team #RSSeedRow { visibility: collapse; }
-.rs-team .RSSheet { margin-top: 18px; width: 91%; }
-.rs-team .RSTitle { font-size: 32px; margin-bottom: 5px; }
-.rs-team .RSHint { margin-bottom: 8px; }
-#RSRoomFrame { width: 100%; height: 100px; visibility: collapse; }
-.rs-transport #RSRoomFrame { visibility: visible; }
-#RSRoomBrowser { width: 100%; height: 100%; }
-.RSRoomHint { color: #ebd5bf; font-size: 16px; margin-bottom: 4px; }

@@ -70,19 +70,18 @@
 						<Panel id="RandomShopContent">
 							<Panel class="RSSheet">
 								<Label class="RSTitle" text="Chaos Shop" />
-                                <Panel id="RSRoomBox">
-                                    <Panel class="RSModeRow">
-                                        <Button id="RSRoomConnect" class="RSMode" onactivate="$.GetContextPanel().RandomShopConnectRoom();"><Label id="RSRoomConnectLabel" /></Button>
-                                        <Button id="RSRoomBack" class="RSMode" onactivate="$.GetContextPanel().RandomShopRoom(false);"><Label id="RSRoomBackLabel" /></Button>
-                                    </Panel>
-                                    <Label id="RSRoomHint" class="RSRoomHint" />
-                                    <Panel id="RSRoomFrame" />
-                                </Panel>
 								<Panel id="RSPicker">
+									<Panel id="RSBlindReveal" visible="false">
+										<Image id="RSRevealIcon" scaling="stretch-to-fit-preserve-aspect" />
+										<Panel class="RSItemInfo">
+											<Label id="RSRevealLabel" class="RSEyebrow" />
+											<Label id="RSRevealName" />
+										</Panel>
+									</Panel>
 									<Panel class="RSModeRow">
 									    <Button id="RSClassicMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopMode(false);"><Label id="RSClassicLabel" /></Button>
 									    <Button id="RSDraftMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopMode(true);"><Label id="RSDraftLabel" /></Button>
-                                    <Button id="RSTeamMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopRoom(true);"><Label id="RSTeamLabel" /></Button>
+									    <Button id="RSBlindMode" class="RSMode" onactivate="$.GetContextPanel().RandomShopMode('blind');"><Label id="RSBlindLabel" /></Button>
 									</Panel>
 									<Panel id="RSSeedRow">
 									    <Label id="RSSeedLabel" />
@@ -144,7 +143,7 @@
 											<Label id="RSPrice" />
 										</Panel>
 									</Panel>
-									<Panel class="RSProgressTrack"><Panel id="RSProgress" /></Panel>
+									<Panel id="RSProgressTrack" class="RSProgressTrack"><Panel id="RSProgress" /></Panel>
 									<Label id="RSPurchaseStatus" class="RSMessage" />
 									<Button id="RSShowItem" class="RSAction" onactivate="$.GetContextPanel().RandomShopShowItem();"><Label id="RSShowLabel" /></Button>
 								</Panel>

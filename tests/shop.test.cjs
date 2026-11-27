@@ -16,8 +16,6 @@ class Panel {
   }
   GetParent(){return this.parent;}
   IsValid(){return this.valid;}
-  DeleteAsync(){this.valid=false; if(this.parent) this.parent.children=this.parent.children.filter(c=>c!==this);}
-  SetURL(value){this.url=value;}
   BHasClass(c){return this.classes.has(c);}
   AddClass(c){this.classes.add(c);}
   RemoveClass(c){this.classes.delete(c);}
@@ -50,8 +48,6 @@ const tabs={EShopTab_Weapon:'showingWeapon',EShopTab_Vitality:'showingArmor',ESh
 let now=0, timers=[], requests=[], logs=[], reject=false;
 function run(source, context) {
   const $={
-    CreatePanel:(type,parent,id)=>new Panel(id,type,parent),
-    RegisterEventHandler:(name,panel,fn)=>{panel[name]=fn;},
     GetContextPanel:()=>context, Language:()=>'russian', Msg:m=>logs.push(m),
     Localize:key=>key==='#upgrade_close_range'?'Close Quarters':key,
     Schedule:(seconds,fn)=>timers.push({at:now+seconds*1000,fn,context}),
@@ -284,51 +280,70 @@ assert.equal(hand().round, 13);
 assert.equal(hand().tier, 2);
 console.log('PASS: 1,120 share-code round trips, distinct hands, partial pool, one reroll, eligibility at click, restored hand, unavailable skip, selected card pinned until closed-shop inventory receipt.');
 
+// A blind roll survives leaving the shop, dispatching the purchase and a HUD reload.
 shop.RandomShopSkip();
 card.RemoveClass('owned');
-shop.RandomShopRoom(true);
-assert.equal(new URL(view('RSRoomBrowser').url).origin,'https://chaos-shop-rooms.vercel.app');
-const web=view('RSRoomBrowser');
-assert.equal(new URL(web.url).searchParams.get('seats'),'6');
-assert.equal(view('RSRoomAddress'),undefined);
-const tag=new URL(web.url).searchParams.get('client');
-let number=0;
-let roomNo=0,roomHand;
-do {
-  const code=(roomNo++).toString(16).toUpperCase().padStart(10,'0');
-  roomHand={seed:code,tier:1,mask:7,round:1,rerolled:false};
-} while (!engine.ChaosDraftSharedHand(roomHand).includes('upgrade_goose_egg'));
-const snapshot={code:roomHand.seed,host:true,players:6,version:1,round:0,tier:0,mask:7,rerolled:false,choice:null,done:false,ready:true,locked:false};
-function echoRoom(overrides={}) {
-  Object.assign(snapshot,overrides);
-  web.HTMLTitle(web,'CSROOM1|'+JSON.stringify({tag,seq:++number,state:{...snapshot}}));
-  advance(410);
-}
-function lastCommand() {return new URLSearchParams(new URL(web.url).hash.slice(1));}
-echoRoom({players:7});
-assert.equal(shop.BHasClass('rs-team-ready'),false);
-echoRoom({players:6});
+shop.RandomShopMode('blind');
+assert.match(xml.replace(/&apos;/g,"'"),/id="RSBlindMode"[^>]+RandomShopMode\('blind'\)/);
+assert.doesNotMatch(xml + shopScript + workerScript,/CitadelHTMLPanel|chaos-shop-rooms\.vercel\.app/);
+assert.equal(view('RSBlindMode').BHasClass('rs-selected'),true);
+gold.text='0';
+const beforeBlind = requests.length;
+const blindLogs = logs.length;
 shop.RandomShopRollTier(1);
-assert.equal(lastCommand().get('op'),'deal');
-assert.equal(pending(),null);
-echoRoom({round:1,tier:1,ready:false});
-assert.equal(view('RSHandCode').visible,false,'room members only see the room code');
-const chosen=hand().tokens.indexOf('upgrade_goose_egg');
-shop.RandomShopPick(chosen);
-assert.equal(lastCommand().get('op'),'pick');
-assert.equal(pending(),null,'only server-accepted local intent can reserve');
-echoRoom({choice:chosen,locked:true});
-assert.equal(pending().team,snapshot.code+'.1');
-closeShop(); quick.AddClass('InShopZone'); advance(700);
-assert.equal(requests.length,6);
-assert.equal(lastCommand().get('view'),'0','quickbuy HUD pauses polls while the shop is suspended');
-equip('techPower','isTech').AddClass('isActiveItem'); advance(400);
-assert.equal(lastCommand().get('op'),'finish');
-assert.equal(lastCommand().get('index'),String(chosen));
-confirmed(); advance(500);
-assert.equal(lastCommand().get('view'),'1','reopening resynchronizes the room');
-echoRoom({done:true,ready:true});
-assert.equal(hand(),null);
-echoRoom({round:2,choice:0,done:false,ready:false});
-assert.equal(pending(),null,'remote state alone must never purchase');
-console.log('PASS: compiled Panorama team handlers, server acknowledgement before reserving, closed-shop receipt and no purchase from unrequested server state.');
+advance(800);
+const mystery = pending();
+assert.equal(mystery.blind,true);
+assert.equal(mystery.token,'upgrade_goose_egg');
+function stillHidden() {
+  assert.equal(pending().serial,mystery.serial);
+  assert.equal(view('RSItemName').text,'Неизвестный предмет');
+  assert.equal(view('RSItemTier').text,'Уровень I');
+  assert.equal(view('RSFallbackTier').text,'?');
+  for (const id of ['RSIconImage','RSBlindReveal','RSPrice','RSProgressTrack','RSShowItem']) assert.equal(view(id).visible,false,id);
+  assert.doesNotMatch(logs.slice(blindLogs).join('\n'),/goose.egg/i);
+}
+stillHidden();
+shop.RandomShopShowItem();
+assert.ok(shop.BHasClass('gShowingRandom'));
+assert.ok(shop.BHasClass('showingAllItems'));
+assert.equal(card.BHasClass('rs-native-target'),false);
+run(shopScript,shop);
+shop.RandomShopMode(false);
+shop.RandomShopRollTier(2);
+advance(700);
+stillHidden();
+quick.AddClass('InShopZone');
+advance(400);
+assert.equal(requests.length,beforeBlind);
+gold.text='800';
+closeShop();
+advance(3800);
+assert.equal(requests.length,beforeBlind+1);
+assert.equal(requests.at(-1).open,false);
+card.AddClass('owned');
+equip('techPower','isTech');
+shop.AddClass('gShopOpen');
+advance(500);
+stillHidden();
+closeShop();
+equip('techPower','isTech').AddClass('isActiveItem');
+advance(500);
+confirmed();
+assert.equal(view('RSBlindReveal').visible,true);
+assert.equal(view('RSRevealName').text,mystery.name);
+assert.equal(view('RSRevealIcon').src,mystery.image);
+run(shopScript,shop);
+assert.equal(view('RSBlindReveal').visible,true);
+assert.equal(view('RSRevealName').text,mystery.name);
+quick.RemoveClass('InShopZone');
+card.RemoveClass('owned');
+shop.RandomShopMode(false);
+shop.RandomShopRollTier(1);
+advance(700);
+assert.equal(view('RSBlindReveal').visible,false);
+assert.equal(pending().blind,false);
+assert.equal(view('RSIconImage').visible,true);
+assert.equal(view('RSItemName').text,mystery.name);
+assert.equal(view('RSShowItem').visible,true);
+console.log('PASS: independent Blind roll, no item leaks before purchase, closed-shop auto-buy, inventory-only reveal with art, HUD reload and return to classic rolls.');

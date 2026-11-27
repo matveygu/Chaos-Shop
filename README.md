@@ -1,29 +1,24 @@
 # Chaos Shop
 
-Chaos Shop adds a **?** tab to the Deadlock item shop. Roll one random item, draft from three cards, or share a draft with up to five friends. The shop pins your choice and requests the purchase when you can afford it in a shop zone. A new inventory slot confirms the purchase.
+Chaos Shop adds a **?** tab to the Deadlock item shop. Choose a tier and the categories you want to roll. Each player rolls locally and spends their own souls.
 
 ## Install
 
 Enable [random_shop.vpk](random_shop.vpk) with your Deadlock mod manager and restart the game. Use one Chaos Shop build at a time. [Chaos Shop.zip](Chaos%20Shop.zip) also includes the Panorama sources.
 
-## Play together
+## Play
 
-1. Everyone installs the current VPK and opens **? → Team room** (**Командная комната**).
-2. The host chooses **Create room → Copy code**. Friends enter the ten-character code and choose **Join**.
-3. Start with 2–6 players. The host selects the categories and tier. Everyone sees the same three cards and spends their own souls. The host can reroll once, before anyone picks or passes.
-4. The ready counter shows how many players have bought or passed. Once everyone is ready, the host can start another round. Friends who join mid-round get the current hand.
-5. Leaving frees your seat. If the host leaves, the next player who joined becomes host. The last player to leave closes the room. Rooms expire four hours after creation.
+- **Single roll** shows one item and pins it until purchase.
+- **Pick one of three** deals up to three eligible items. Choose a card or reroll the hand once. Leave the optional seed field empty for an independent draw.
+- **Blind** (**Вслепую**) pins one mystery item from your selected tier and categories. A question mark and the purchase status stay on screen while you wait. When the item reaches your inventory, the **?** tab reveals its name and artwork. If the shop was closed, the reveal is there the next time you open the tab. It stays until your next roll.
 
-The VPK connects to the room service when you select Team room. Solo play and shared seeds work offline.
-
-## Play solo
-
-Choose Weapon, Vitality or Spirit and a tier. **Single roll** pins one item. **Pick one of three** offers a hand and one optional reroll before picking. A shared seed gives two players the same sequence when they select the same tier, categories and rerolls.
+All three modes use Deadlock's normal shop rules. Once you have enough souls and can buy in a shop zone, Chaos Shop requests the purchase even with the shop closed.
 
 ## Earlier versions
 
+- [Six-player room build](https://github.com/matveygu/Chaos-Shop/tree/pre-blind-solo)
 - [Previous two-player VPK](https://github.com/matveygu/Chaos-Shop/tree/pre-six-player-rooms)
 - [Pre-Vercel build, including the portable Windows host](https://github.com/matveygu/Chaos-Shop/tree/pre-vercel-rooms)
 - [Original release before the shop updates](https://github.com/matveygu/Chaos-Shop/tree/original-before-shop-updates)
 
-The [implementation notes](DOCUMENTATION.md) cover the game files and the room service.
+The [implementation notes](DOCUMENTATION.md) cover the game files and purchase confirmation.

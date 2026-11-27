@@ -1,11 +1,9 @@
 # Implementation notes
 
-The shop layout loads the draft, inventory and shop scripts from `panorama/scripts`. The Quickbuy HUD watches the selected item while the shop is closed. It activates the matching native shop card only when buying is possible, and records success when the local hero's equipped inventory confirms the item.
+The shop layout loads the draft, inventory and shop scripts from `panorama/scripts`. The Quickbuy HUD watches the pinned item while the shop is closed. It activates the matching native shop card when buying is possible. The shop checks the local hero’s equipment to confirm the purchase. For items with matching equipment signatures, it also checks ownership of the exact card or a new named purchase entry.
 
-The three-card draft uses a deterministic catalog and the same room code, tier, category mask, round and reroll flag on each client. Eligibility and purchases remain local to each player. Team room opens a CitadelHTMLPanel with a code field and a copy button. The current VPK advertises support for six players. Panorama sends fixed actions in the URL fragment and accepts validated room snapshots from the page title. A server response can reserve an item only after the local player chooses it.
+Single roll and Blind draw from eligible local shop cards. A three-card draft uses the local pool by default. Entering an optional seed uses the deterministic catalog, tier, category mask, round and reroll flag.
 
-The Quickbuy HUD pauses room polling when the shop is hidden. It can report a confirmed purchase while the shop layout is suspended, with retries limited to once per minute after backoff. Reopening the shop refreshes the room.
+A Blind reservation stores its mode alongside the chosen item in the match HUD. While it is pending, the shop renders a question mark and a neutral tier label. After the HUD confirms acquisition for that roll, the shop saves the name and artwork so the player can see the reveal after reopening the shop or reloading its layout. Starting the next roll clears the reveal.
 
-Compile the two Panorama layouts, four scripts and `random_shop.css` with the Source 2 resource compiler. Pack the seven compiled resources using their original Panorama paths. Run `node tests/shop.test.cjs` to check purchase handling, draft codes and the shop/room bridge.
-
-See [room hosting and tests](rooms/README.md). For the previous standalone Windows host, see the [pre-Vercel tag](https://github.com/matveygu/Chaos-Shop/tree/pre-vercel-rooms).
+Compile the two Panorama layouts, four scripts and `random_shop.css` with the Source 2 resource compiler. Pack the seven compiled resources using their original Panorama paths. Run `node tests/shop.test.cjs` against source or pass the path to a decompiled Panorama directory to check the packaged scripts. The tests cover buying with the shop closed, independent drafts, seeded hands and the Blind reveal.
