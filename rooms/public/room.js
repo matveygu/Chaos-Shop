@@ -2,12 +2,14 @@
 const el = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const tag = params.get('client') || 'browser';
+const seats = !params.has('client') || params.get('seats') === '6' ? 6 : 2;
 const en = params.get('lang') === 'en';
 const t = (ru, eng) => en ? eng : ru;
 document.documentElement.lang = en ? 'en' : 'ru';
 if (en) {
-  for (const [id,str] of Object.entries({create:'Create room',join:'Join',copy:'Copy invite',leave:'Leave'})) el(id).textContent=str;
-  el('code').placeholder='Friend’s code';
+  for (const [id,str] of Object.entries({create:'Create room',join:'Join',copy:'Copy code',leave:'Leave'})) el(id).textContent=str;
+  el('code').placeholder='Room code';
+  for (const id of ['code','invite']) el(id).setAttribute('aria-label','Room code');
 }
 const storageKey = 'chaos-team-v1:' + tag;
 let knownCode='';
@@ -30,9 +32,10 @@ let state=null, serial=0, tail=Promise.resolve(), error='', busy=0, lastHash='';
 let pendingInvite='', nextJoin=0, retryDelay=2000, joinError='';
 let timer, openShop=true, unchanged=0, failures=0;
 const messages={
-  no_room:t('Комната закрыта или код неверен.','Room closed or code incorrect.'), full:t('В комнате уже двое.','Room is full.'),
+  no_room:t('Комната закрыта или код неверен.','Room closed or code incorrect.'), full:t('Все места заняты.','Room is full.'),
+  update_mod:t('Обнови Chaos Shop, чтобы войти в эту комнату.','Update Chaos Shop to join this room.'),
   stale:t('Расклад обновился. Проверь карточки.','Hand changed. Check the cards.'), locked:t('Выбор уже зафиксирован.','Choice is already locked.'),
-  offline:t('Нет связи с сервисом. Повторяю подключение…','Service unreachable. Reconnecting…'), waiting:t('Ожидаем второго игрока.','Waiting for the other player.'),
+  offline:t('Нет связи с сервисом. Повторяю подключение…','Service unreachable. Reconnecting…'), waiting:t('Начать можно вдвоём. Отправь другу код комнаты.','Two players can start. Share the room code with a friend.'),
   slow_down:t('Слишком много попыток. Подожди минуту.','Too many attempts. Wait a minute.')
 };
 function draw() {
@@ -40,12 +43,13 @@ function draw() {
   for (const id of ['create','join','leave']) el(id).disabled=!!busy;
   let hint=t('Создай комнату или введи код друга.','Create a room or enter your friend’s code.');
   if (state) {
-    el('roster').textContent=(state.host?t('Ведущий','Host'):t('Участник','Guest'))+' · '+state.players+'/2';
-    el('invite').value=location.origin+'/#join='+state.code;
+    el('roster').textContent=(state.host?t('Ведущий','Host'):t('Участник','Guest'))+' · '+state.players+'/'+(state.capacity || 2);
+    el('invite').value=state.code;
     hint=state.players<2 ? messages.waiting :
       state.ready ? (state.host?t('Выбери категории и тир в магазине.','Choose categories and tier in the shop.'):t('Ведущий выбирает тир.','Host is choosing a tier.')) :
-      state.done?t('Готово. Ждём напарника.','Ready. Waiting for teammate.'):
+      state.done?t('Ждём остальных игроков.','Waiting for the other players.'):
       state.choice!==null?t('Предмет закреплён до покупки.','Item pinned until purchased.'):t('Выберите по одной карте.','Each player picks one card.');
+    if (state.round && Number.isInteger(state.finished)) hint+=' '+t('Готовы','Ready')+' '+state.finished+'/'+state.players+'.';
   }
   el('status').textContent=error||(!state && joinError)||hint;
 }
@@ -56,6 +60,7 @@ async function post(body) {
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
   try {
+    if (body.op==='create' || body.op==='join') body={...body,seats};
     if (body.op==='state' && knownCode) body={...body,code:knownCode};
     const res=await fetch('/room',{method:'POST',headers:{'Content-Type':'application/json','X-Room-Player':key},body:JSON.stringify(body),signal:controller.signal});
     if ([502,503,504,530].includes(res.status)) throw new TypeError('Service unreachable');
@@ -112,7 +117,7 @@ el('copy').onclick=async()=>{
   const field=el('invite'); field.select();
   try { await navigator.clipboard.writeText(field.value); }
   catch { if (!document.execCommand('copy')) { el('status').textContent=t('Нажми Ctrl+C.','Press Ctrl+C.'); return; } }
-  el('status').textContent=t('Приглашение скопировано.','Invite copied.');
+  el('status').textContent=t('Код скопирован.','Code copied.');
 };
 el('leave').onclick=()=>state && enqueue({op:'leave',code:state.code});
 addEventListener('hashchange',fromGame);

@@ -223,7 +223,6 @@
     var teamMode = !!hud.GetAttributeInt('rs_team_mode', 0);
     var roomState = null, browser = null, browserURL = '', messageNo = 0, browserStarted = 0;
     var defaultOrigin = 'https://chaos-shop-rooms.vercel.app';
-    var teamOrigin = hud.GetAttributeString('rs_team_origin', '') || defaultOrigin;
     hud.SetAttributeString('rs_team_page','');
     hud.SetAttributeString('rs_live_pick','');
     var tag = hud.GetAttributeString('rs_team_client', '');
@@ -233,15 +232,8 @@
     }
     var lastSend = '', retryAt = 0;
     function teamHint(ruText, enText) { label('RSRoomHint', ru ? ruText : enText); }
-    function roomAddress(input) {
-        var value = String(input || '').trim();
-        if (!value) return {origin:defaultOrigin};
-        if (/^[0-9a-f]{10}$/i.test(value)) return {origin:defaultOrigin,code:value.toUpperCase()};
-        var m = /^(https:\/\/[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?(?::[0-9]{1,5})?)\/?(?:#join=([a-f0-9]{10}))?$/i.exec(String(input || '').trim());
-        return m && { origin:m[1].toLowerCase(), code:(m[2] || '').toUpperCase() };
-    }
     function validState(s) {
-        return s && /^[A-F0-9]{10}$/.test(s.code) && (s.players === 1 || s.players === 2) &&
+        return s && /^[A-F0-9]{10}$/.test(s.code) && Number.isInteger(s.players) && s.players >= 1 && s.players <= 6 &&
             typeof s.host === 'boolean' && typeof s.ready === 'boolean' && typeof s.locked === 'boolean' &&
             typeof s.done === 'boolean' && typeof s.rerolled === 'boolean' &&
             Number.isInteger(s.round) && s.round >= 0 && s.round <= 99999 &&
@@ -294,11 +286,9 @@
         dropRoomHand();
         monitor(true);
     }
-    function connectRoom(address) {
-        if (!address) { teamHint('Введи HTTPS-адрес сервиса или приглашение друга.', 'Enter the HTTPS service address or an invite link.'); return; }
+    function connectRoom() {
         if (browser && browser.IsValid()) browser.DeleteAsync(0);
-        teamOrigin = address.origin;
-        hud.SetAttributeString('rs_team_origin', teamOrigin);
+        panel('RSRoomConnect').visible=false;
         var web = $.CreatePanel('CitadelHTMLPanel',panel('RSRoomFrame'),'RSRoomBrowser');
         browser = web; browserStarted=Date.now(); roomState=null; lastSend='';
         var frameVersion=hud.GetAttributeInt('rs_room_frame',0)+1;
@@ -307,7 +297,7 @@
         hud.SetAttributeInt('rs_room_visible',1);
         hud.SetAttributeString('rs_team_page','');
         hud.SetAttributeString('rs_view_after',String(Date.now()+700));
-        browserURL = teamOrigin+'/?client='+tag+'&lang='+(ru?'ru':'en');
+        browserURL = defaultOrigin+'/?client='+tag+'&seats=6&lang='+(ru?'ru':'en');
         root.AddClass('rs-transport');
         teamHint('Подключение к сервису…','Connecting to room service…');
         var seq = 0;
@@ -325,19 +315,14 @@
             hud.SetAttributeString('rs_live_pick',roomState && !roomState.done && roomState.choice !== null ?
                 teamKey(roomState)+'.'+roomState.choice : '');
             if (!roomState) { dropRoomHand(); hud.SetAttributeString('rs_team_intent',''); }
-            teamHint(roomState ? 'Код комнаты · '+roomState.code : 'Создай комнату или введи код друга.',
-                roomState ? 'Room code · '+roomState.code : 'Create a room or enter your friend’s code.');
+            teamHint('','');
+            panel('RSRoomConnect').visible=false;
             processRoom(); schedule(0.1);
         });
-        web.SetURL(browserURL + (address.code ? '#join='+address.code : ''));
+        web.SetURL(browserURL);
     }
     root.RandomShopConnectRoom = function () {
-        if (!teamMode) return;
-        var address=roomAddress(panel('RSRoomAddress').text);
-        if (roomState && address && (address.origin!==teamOrigin || (address.code && address.code!==roomState.code))) {
-            teamHint('Сначала выйди из текущей комнаты.','Leave your current room first.'); return;
-        }
-        connectRoom(address);
+        if (teamMode && browserStarted) connectRoom();
     };
     root.RandomShopRoom = function (open) {
         if (current || rollTier || (hand && !hand.team)) return;
@@ -345,7 +330,7 @@
         root.SetHasClass('rs-team',teamMode);
         if (!teamMode) { dropRoomHand(); root.RemoveClass('rs-team-ready'); }
         else {
-            if (teamOrigin && !browser) connectRoom({origin:teamOrigin});
+            if (!browser) connectRoom();
             processRoom(); schedule(0.1);
         }
     };
@@ -516,8 +501,8 @@
             label('RSOfferPrice' + i, canPick ? price : (entry && acquired(entry.card) ?
                 (ru ? 'Уже куплено' : 'Already owned') : (ru ? 'Недоступно' : 'Unavailable')));
         }
-        label('RSHandCode', hand.seed ? ChaosDraftCode(hand) : '');
-        panel('RSHandCode').visible = !!hand.seed;
+        label('RSHandCode', hand.seed && !hand.team ? ChaosDraftCode(hand) : '');
+        panel('RSHandCode').visible = !!hand.seed && !hand.team;
         panel('RSReroll').enabled = !hand.rerolled;
         label('RSRerollLabel', hand.rerolled ? (ru ? 'Переброс использован' : 'Reroll used') :
             (ru ? 'Перебросить · 1' : 'Reroll · 1'));
@@ -699,8 +684,10 @@
         if (current) monitor(open);
         if (teamMode) {
             processRoom();
-            if (browserStarted && Date.now()-browserStarted>10000)
-                teamHint('Нет ответа. Проверь адрес и нажми «Подключиться».','No response. Check the URL and reconnect.');
+            if (browserStarted && Date.now()-browserStarted>10000) {
+                teamHint('Сервис не отвечает. Попробуй ещё раз.', 'Room service did not respond. Try again.');
+                panel('RSRoomConnect').visible=true;
+            }
         }
         if (open && active && hand && !current && Date.now() >= handRefreshAt) renderHand(currentCatalog());
         if (open && active && !current && !hand) {
@@ -823,10 +810,9 @@
     label('RSHandTitle', ru ? 'Выбери один предмет' : 'Choose one item');
     label('RSSkipLabel', ru ? 'Пропустить расклад' : 'Skip hand');
     panel('RSSeed').text = seed;
-    label('RSTeamLabel',ru?'Комната на двоих':'Duo room');
-    label('RSRoomConnectLabel',ru?'Подключиться':'Connect');
+    label('RSTeamLabel',ru?'Командная комната':'Team room');
+    label('RSRoomConnectLabel',ru?'Повторить':'Retry');
     label('RSRoomBackLabel',ru?'Назад':'Back');
-    panel('RSRoomAddress').text='';
     teamHint('Создай комнату или введи код друга.','Create a room or enter your friend’s code.');
     root.SetHasClass('rs-team',teamMode);
     setMask(mask);
@@ -836,7 +822,7 @@
     label('RSPinnedLabel', ru ? 'Закреплённый предмет' : 'Pinned item');
     label('RSShowLabel', ru ? 'Показать предмет в магазине' : 'Show item in shop');
     persist();
-    if (teamMode && teamOrigin) { connectRoom({origin:teamOrigin}); schedule(0.1); }
+    if (teamMode) { connectRoom(); schedule(0.1); }
     if (current) renderItem();
     if (root.BHasClass('gShowingRandom')) root.ActivateRandomTab();
     else if (current) schedule(0.1);

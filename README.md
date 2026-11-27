@@ -1,6 +1,6 @@
 # Chaos Shop
 
-Chaos Shop adds a **?** tab to the Deadlock item shop. Roll one random item, draft from three cards, or play a shared draft with a friend. The shop pins your choice and requests the purchase when you can afford it in a shop zone. A new inventory slot confirms the purchase.
+Chaos Shop adds a **?** tab to the Deadlock item shop. Roll one random item, draft from three cards, or share a draft with up to five friends. The shop pins your choice and requests the purchase when you can afford it in a shop zone. A new inventory slot confirms the purchase.
 
 ## Install
 
@@ -8,12 +8,13 @@ Enable [random_shop.vpk](random_shop.vpk) with your Deadlock mod manager and res
 
 ## Play together
 
-1. Both players install the same VPK and open **? → Duo room** (in Russian, **Комната на двоих**).
-2. One player chooses **Create room** and sends the invitation to the other. The second player pastes the invitation in the shop address field, or enters the ten-character code and chooses **Join**.
-3. At **2/2**, the host selects categories and a tier. Both players see the same cards. The host can reroll once before either player picks. Each buys their own choice with their own souls.
-4. After both players buy or pass, the host can deal again. Leaving closes the room. Rooms expire after four hours.
+1. Everyone installs the current VPK and opens **? → Team room** (**Командная комната**).
+2. The host chooses **Create room → Copy code**. Friends enter the ten-character code and choose **Join**.
+3. Start with 2–6 players. The host selects the categories and tier. Everyone sees the same three cards and spends their own souls. The host can reroll once, before anyone picks or passes.
+4. The ready counter shows how many players have bought or passed. Once everyone is ready, the host can start another round. Friends who join mid-round get the current hand.
+5. Leaving frees your seat. If the host leaves, the next player who joined becomes host. The last player to leave closes the room. Rooms expire four hours after creation.
 
-The VPK opens the [hosted room service](https://chaos-shop-rooms.vercel.app/) when you select Duo room. Players need no launcher, account or personal server. Solo play and shared seeds work offline.
+The VPK connects to the room service when you select Team room. Solo play and shared seeds work offline.
 
 ## Play solo
 
@@ -21,6 +22,7 @@ Choose Weapon, Vitality or Spirit and a tier. **Single roll** pins one item. **P
 
 ## Earlier versions
 
+- [Previous two-player VPK](https://github.com/matveygu/Chaos-Shop/tree/pre-six-player-rooms)
 - [Pre-Vercel build, including the portable Windows host](https://github.com/matveygu/Chaos-Shop/tree/pre-vercel-rooms)
 - [Original release before the shop updates](https://github.com/matveygu/Chaos-Shop/tree/original-before-shop-updates)
 

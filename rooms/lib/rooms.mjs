@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 const TTL = 4 * 60 * 60 * 1000;
+const maxPlayers = 6;
 const prefix = 'chaos:{rooms-v1}:';
 const codePattern = /^[0-9A-F]{10}$/;
 const hash = text => createHash('sha256').update(text).digest('hex');
@@ -19,7 +20,7 @@ return 1`;
 // Check the exact version read by the caller. Competing picks and rerolls cannot both win.
 const update = `
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
-if ARGV[2] == 'leave' then
+if ARGV[2] == 'close' then
   redis.call('DEL', unpack(KEYS))
   return 1
 end
@@ -29,6 +30,8 @@ if ARGV[2] == 'join' then
   local member = redis.call('GET', KEYS[2])
   if member and member ~= ARGV[4] then return -1 end
   redis.call('SET', KEYS[2], ARGV[4], 'PX', ttl)
+elseif ARGV[2] == 'leave' then
+  redis.call('DEL', KEYS[2])
 end
 redis.call('SET', KEYS[1], ARGV[3], 'PX', ttl)
 return 1`;
@@ -39,21 +42,25 @@ if n == 1 then redis.call('EXPIRE', KEYS[1], 60) end
 return n`;
 const player = id => ({id, choice:null, done:false});
 const member = (room,id) => room.players.find(p => p.id === id);
+// Rooms created by the original VPK keep their two-seat protocol until expiry.
+const capacity = room => room.capacity || 2;
 
 function snapshot(room, id) {
   const me = room && member(room,id);
   if (!me) return null;
-  return {code:room.code, host:me === room.players[0], players:room.players.length,
+  const finished = room.players.filter(p => p.done).length;
+  return {code:room.code, host:me === room.players[0], players:room.players.length, capacity:capacity(room), finished,
     version:room.version, round:room.round, tier:room.tier, mask:room.mask, rerolled:room.rerolled,
     choice:me.choice, done:me.done, locked:room.players.some(p => p.choice !== null || p.done),
-    ready:room.players.length === 2 && (!room.round || room.players.every(p => p.done))};
+    ready:room.players.length >= 2 && (!room.round || finished === room.players.length)};
 }
 
 function change(room, id, data) {
   const me = member(room,id);
   if (data.op === 'join') {
     if (me) return false;
-    if (room.players.length >= 2) fail(409,'full');
+    if (room.players.length >= capacity(room)) fail(409,'full');
+    if (capacity(room) > 2 && data.seats !== maxPlayers) fail(409,'update_mod');
     room.players.push(player(id));
     return true;
   }
@@ -110,10 +117,10 @@ export function rooms(command) {
     if (data.op === 'create' || data.op === 'join') {
       if (await command(['EVAL',limit,1,prefix+'attempt:'+hash(ip)]) > 24) fail(429,'slow_down');
     }
-    for (let attempt=0; attempt<5; attempt++) {
+    for (let attempt=0; attempt<maxPlayers+2; attempt++) {
       if (data.op === 'create') {
         const code=randomBytes(5).toString('hex').toUpperCase();
-        const room={code,players:[player(id)],version:1,round:0,tier:0,mask:7,rerolled:false};
+        const room={code,capacity:data.seats===maxPlayers ? maxPlayers : 2,players:[player(id)],version:1,round:0,tier:0,mask:7,rerolled:false};
         const result=await command(['EVAL',create,2,pointer,roomKey(code),code,JSON.stringify(room),TTL]);
         if (result === 1) return snapshot(room,id);
         if (result === 0) continue;
@@ -125,14 +132,23 @@ export function rooms(command) {
       const raw=await command(['GET',target]);
       const room=JSON.parse(raw);
       if (data.op === 'state') return snapshot(room,id);
-      if (!room && data.op === 'leave') return null;
+      if (data.op === 'leave' && (!room || !member(room,id))) return null;
       if (!room) fail(404,'no_room');
       if (!change(room,id,data)) return snapshot(room,id);
       room.version++;
       const keys=[target];
+      let operation=data.op;
       if (data.op === 'join') keys.push(pointer);
-      if (data.op === 'leave') keys.push(...room.players.map(p => memberKey(p.id)));
-      const result=await command(['EVAL',update,keys.length,...keys,raw,data.op,JSON.stringify(room),room.code]);
+      if (data.op === 'leave') {
+        if (capacity(room) === 2 || room.players.length === 1) {
+          operation='close';
+          keys.push(...room.players.map(p => memberKey(p.id)));
+        } else {
+          keys.push(pointer);
+          room.players=room.players.filter(p => p.id !== id);
+        }
+      }
+      const result=await command(['EVAL',update,keys.length,...keys,raw,operation,JSON.stringify(room),room.code]);
       if (result === -1) fail(409,'already_in_room');
       if (result === 1) return data.op === 'leave' ? null : snapshot(room,id);
     }

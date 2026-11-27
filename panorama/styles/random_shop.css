@@ -151,7 +151,6 @@
 .rs-team .RSSheet { margin-top: 18px; width: 91%; }
 .rs-team .RSTitle { font-size: 32px; margin-bottom: 5px; }
 .rs-team .RSHint { margin-bottom: 8px; }
-#RSRoomAddress { width: fill-parent-flow(1); font-size: 17px; height: 36px; color: #fcebd7; background-color: #211e26; padding: 4px 7px; border: 1px solid #80657c; }
 #RSRoomFrame { width: 100%; height: 100px; visibility: collapse; }
 .rs-transport #RSRoomFrame { visibility: visible; }
 #RSRoomBrowser { width: 100%; height: 100%; }

@@ -72,7 +72,6 @@
 								<Label class="RSTitle" text="Chaos Shop" />
                                 <Panel id="RSRoomBox">
                                     <Panel class="RSModeRow">
-                                        <TextEntry id="RSRoomAddress" maxchars="230" multiline="false" oninputsubmit="$.GetContextPanel().RandomShopConnectRoom();" />
                                         <Button id="RSRoomConnect" class="RSMode" onactivate="$.GetContextPanel().RandomShopConnectRoom();"><Label id="RSRoomConnectLabel" /></Button>
                                         <Button id="RSRoomBack" class="RSMode" onactivate="$.GetContextPanel().RandomShopRoom(false);"><Label id="RSRoomBackLabel" /></Button>
                                     </Panel>

@@ -288,10 +288,9 @@ shop.RandomShopSkip();
 card.RemoveClass('owned');
 shop.RandomShopRoom(true);
 assert.equal(new URL(view('RSRoomBrowser').url).origin,'https://chaos-shop-rooms.vercel.app');
-view('RSRoomAddress').text='12345678AB';
-shop.RandomShopConnectRoom();
 const web=view('RSRoomBrowser');
-assert.equal(new URL(web.url).hash,'#join=12345678AB');
+assert.equal(new URL(web.url).searchParams.get('seats'),'6');
+assert.equal(view('RSRoomAddress'),undefined);
 const tag=new URL(web.url).searchParams.get('client');
 let number=0;
 let roomNo=0,roomHand;
@@ -299,18 +298,21 @@ do {
   const code=(roomNo++).toString(16).toUpperCase().padStart(10,'0');
   roomHand={seed:code,tier:1,mask:7,round:1,rerolled:false};
 } while (!engine.ChaosDraftSharedHand(roomHand).includes('upgrade_goose_egg'));
-const snapshot={code:roomHand.seed,host:true,players:2,version:1,round:0,tier:0,mask:7,rerolled:false,choice:null,done:false,ready:true,locked:false};
+const snapshot={code:roomHand.seed,host:true,players:6,version:1,round:0,tier:0,mask:7,rerolled:false,choice:null,done:false,ready:true,locked:false};
 function echoRoom(overrides={}) {
   Object.assign(snapshot,overrides);
   web.HTMLTitle(web,'CSROOM1|'+JSON.stringify({tag,seq:++number,state:{...snapshot}}));
   advance(410);
 }
 function lastCommand() {return new URLSearchParams(new URL(web.url).hash.slice(1));}
-echoRoom();
+echoRoom({players:7});
+assert.equal(shop.BHasClass('rs-team-ready'),false);
+echoRoom({players:6});
 shop.RandomShopRollTier(1);
 assert.equal(lastCommand().get('op'),'deal');
 assert.equal(pending(),null);
 echoRoom({round:1,tier:1,ready:false});
+assert.equal(view('RSHandCode').visible,false,'room members only see the room code');
 const chosen=hand().tokens.indexOf('upgrade_goose_egg');
 shop.RandomShopPick(chosen);
 assert.equal(lastCommand().get('op'),'pick');
